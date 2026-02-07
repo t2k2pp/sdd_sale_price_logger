@@ -22,6 +22,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   Product? _selectedProduct;
   Shop? _selectedShop;
   final _priceController = TextEditingController();
+  bool _isTaxIncluded = true;
   DateTime _selectedDate = DateTime.now();
 
   @override
@@ -108,27 +109,55 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       },
                     ),
                   ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    onPressed: () => _showAddShopDialog(context, database),
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
 
-              // Price Input
-              TextFormField(
-                controller: _priceController,
-                decoration: const InputDecoration(
-                  labelText: 'Price',
-                  suffixText: '¥',
-                ),
-                keyboardType: TextInputType.number,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a price';
-                  }
-                  if (int.tryParse(value) == null) {
-                    return 'Please enter a valid number';
-                  }
-                  return null;
-                },
+              Row(
+                children: [
+                  Expanded(
+                    child: TextFormField(
+                      controller: _priceController,
+                      decoration: const InputDecoration(
+                        labelText: 'Price',
+                        suffixText: '¥',
+                      ),
+                      keyboardType: TextInputType.number,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a price';
+                        }
+                        if (int.tryParse(value) == null) {
+                          return 'Please enter a valid number';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  ToggleButtons(
+                    isSelected: [_isTaxIncluded, !_isTaxIncluded],
+                    onPressed: (index) {
+                      setState(() {
+                        _isTaxIncluded = index == 0;
+                      });
+                    },
+                    children: const [
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('税込'),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        child: Text('税抜'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 16),
 
@@ -171,6 +200,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
               productId: drift.Value(_selectedProduct!.id),
               shopId: drift.Value(_selectedShop!.id),
               price: drift.Value(int.parse(_priceController.text)),
+              isTaxIncluded: drift.Value(_isTaxIncluded),
               date: drift.Value(_selectedDate),
             ),
           );
@@ -206,27 +236,40 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       decoration: const InputDecoration(labelText: 'Name'),
                     ),
                     const SizedBox(height: 16),
-                    StreamBuilder<List<Category>>(
-                      stream: database.select(database.categories).watch(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return const CircularProgressIndicator();
-                        }
-                        return DropdownButtonFormField<Category>(
-                          decoration: const InputDecoration(
-                            labelText: 'Category',
+                    Row(
+                      children: [
+                        Expanded(
+                          child: StreamBuilder<List<Category>>(
+                            stream: database
+                                .select(database.categories)
+                                .watch(),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const CircularProgressIndicator();
+                              }
+                              return DropdownButtonFormField<Category>(
+                                decoration: const InputDecoration(
+                                  labelText: 'Category',
+                                ),
+                                value: selectedCategory,
+                                items: snapshot.data!.map((c) {
+                                  return DropdownMenuItem(
+                                    value: c,
+                                    child: Text(c.name),
+                                  );
+                                }).toList(),
+                                onChanged: (v) =>
+                                    setState(() => selectedCategory = v),
+                              );
+                            },
                           ),
-                          value: selectedCategory,
-                          items: snapshot.data!.map((c) {
-                            return DropdownMenuItem(
-                              value: c,
-                              child: Text(c.name),
-                            );
-                          }).toList(),
-                          onChanged: (v) =>
-                              setState(() => selectedCategory = v),
-                        );
-                      },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add),
+                          onPressed: () =>
+                              _showAddCategoryDialog(context, database),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -285,6 +328,114 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                             ),
                           );
 
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                      }
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddShopDialog(
+    BuildContext context,
+    AppDatabase database,
+  ) async {
+    final controller = TextEditingController();
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Add Shop'),
+          content: TextField(
+            controller: controller,
+            decoration: const InputDecoration(labelText: 'Shop Name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                if (controller.text.isNotEmpty) {
+                  await database
+                      .into(database.shops)
+                      .insert(
+                        ShopsCompanion(name: drift.Value(controller.text)),
+                      );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                  }
+                }
+              },
+              child: const Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showAddCategoryDialog(
+    BuildContext context,
+    AppDatabase database,
+  ) async {
+    final controller = TextEditingController();
+    int taxRate = 10;
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Add Category'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Category Name',
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: taxRate,
+                    decoration: const InputDecoration(labelText: 'Tax Rate'),
+                    items: const [
+                      DropdownMenuItem(value: 8, child: Text('8% (Reduced)')),
+                      DropdownMenuItem(
+                        value: 10,
+                        child: Text('10% (Standard)'),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => taxRate = v!),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    if (controller.text.isNotEmpty) {
+                      await database
+                          .into(database.categories)
+                          .insert(
+                            CategoriesCompanion(
+                              name: drift.Value(controller.text),
+                              taxRate: drift.Value(taxRate),
+                            ),
+                          );
                       if (context.mounted) {
                         Navigator.pop(context);
                       }

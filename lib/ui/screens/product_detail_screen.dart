@@ -66,6 +66,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                           database.shops,
                           database.shops.id.equalsExp(database.prices.shopId),
                         ),
+                        drift.innerJoin(
+                          database.products,
+                          database.products.id.equalsExp(
+                            database.prices.productId,
+                          ),
+                        ),
+                        drift.innerJoin(
+                          database.categories,
+                          database.categories.id.equalsExp(
+                            database.products.categoryId,
+                          ),
+                        ),
                       ])
                       .watch(),
               builder: (context, snapshot) {
@@ -91,17 +103,34 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 }
 
                 // Best Price Calculation
-                int minPrice = prices.first.price;
+                double minEffectivePrice = double.infinity;
                 String bestShop = '';
-                // Need to find the shop name for the min price
-                // We can iterate results
+                int bestPriceRaw = 0;
+                bool bestIsTaxIncluded = true;
+
                 for (var row in results) {
                   final p = row.readTable(database.prices);
-                  if (p.price <= minPrice) {
-                    minPrice = p.price;
-                    bestShop = row.readTable(database.shops).name;
+                  final c = row.readTable(database.categories);
+                  final shopName = row.readTable(database.shops).name;
+
+                  double effectivePrice;
+                  if (p.isTaxIncluded) {
+                    effectivePrice = p.price.toDouble();
+                  } else {
+                    effectivePrice = p.price * (1 + c.taxRate / 100);
+                  }
+
+                  if (effectivePrice < minEffectivePrice) {
+                    minEffectivePrice = effectivePrice;
+                    bestShop = shopName;
+                    bestPriceRaw = p.price;
+                    bestIsTaxIncluded = p.isTaxIncluded;
                   }
                 }
+
+                final bestPriceDisplay = bestIsTaxIncluded
+                    ? '¥$bestPriceRaw (税込)'
+                    : '¥$bestPriceRaw (税抜) -> ¥${minEffectivePrice.toStringAsFixed(0)} (税込)';
 
                 return Column(
                   children: [
@@ -115,8 +144,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Icons.thumb_up,
                             color: Colors.green,
                           ),
-                          title: const Text('Best Price'),
-                          subtitle: Text('¥$minPrice at $bestShop'),
+                          title: const Text('Best Price (Tax In)'),
+                          subtitle: Text('$bestPriceDisplay at $bestShop'),
                         ),
                       ),
                     ),
@@ -150,9 +179,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         final row = results[index];
                         final price = row.readTable(database.prices);
                         final shop = row.readTable(database.shops);
+                        final taxLabel = price.isTaxIncluded ? '税込' : '税抜';
 
                         return ListTile(
-                          title: Text('¥${price.price}'),
+                          title: Text('¥${price.price} ($taxLabel)'),
                           subtitle: Text(
                             '${shop.name} - ${DateFormat.yMMMd().format(price.date)}',
                           ),

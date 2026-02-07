@@ -9,17 +9,19 @@ part 'database.g.dart';
 
 class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().withLength(min: 1, max: 50)();
+  TextColumn get name => text()();
+  // Default tax rate in percent (e.g. 8 or 10)
+  IntColumn get taxRate => integer().withDefault(const Constant(10))();
 }
 
 class Shops extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().withLength(min: 1, max: 100)();
+  TextColumn get name => text()();
 }
 
 class Products extends Table {
   IntColumn get id => integer().autoIncrement()();
-  TextColumn get name => text().withLength(min: 1, max: 100)();
+  TextColumn get name => text()();
   IntColumn get categoryId => integer().references(Categories, #id)();
   TextColumn get imagePath => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
@@ -30,6 +32,8 @@ class Prices extends Table {
   IntColumn get productId => integer().references(Products, #id)();
   IntColumn get shopId => integer().references(Shops, #id)();
   IntColumn get price => integer()();
+  // Whether the entered price includes tax
+  BoolColumn get isTaxIncluded => boolean().withDefault(const Constant(true))();
   DateTimeColumn get date => dateTime()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
@@ -39,7 +43,22 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration {
+    return MigrationStrategy(
+      onCreate: (Migrator m) async {
+        await m.createAll();
+      },
+      onUpgrade: (Migrator m, int from, int to) async {
+        if (from < 2) {
+          await m.addColumn(categories, categories.taxRate);
+          await m.addColumn(prices, prices.isTaxIncluded);
+        }
+      },
+    );
+  }
 }
 
 LazyDatabase _openConnection() {

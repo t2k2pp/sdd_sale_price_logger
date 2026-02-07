@@ -28,15 +28,23 @@ class $CategoriesTable extends Categories
     'name',
     aliasedName,
     false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 1,
-      maxTextLength: 50,
-    ),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _taxRateMeta = const VerificationMeta(
+    'taxRate',
+  );
   @override
-  List<GeneratedColumn> get $columns => [id, name];
+  late final GeneratedColumn<int> taxRate = GeneratedColumn<int>(
+    'tax_rate',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(10),
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, taxRate];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -60,6 +68,12 @@ class $CategoriesTable extends Categories
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('tax_rate')) {
+      context.handle(
+        _taxRateMeta,
+        taxRate.isAcceptableOrUnknown(data['tax_rate']!, _taxRateMeta),
+      );
+    }
     return context;
   }
 
@@ -77,6 +91,10 @@ class $CategoriesTable extends Categories
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      taxRate: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}tax_rate'],
+      )!,
     );
   }
 
@@ -89,17 +107,23 @@ class $CategoriesTable extends Categories
 class Category extends DataClass implements Insertable<Category> {
   final int id;
   final String name;
-  const Category({required this.id, required this.name});
+  final int taxRate;
+  const Category({required this.id, required this.name, required this.taxRate});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    map['tax_rate'] = Variable<int>(taxRate);
     return map;
   }
 
   CategoriesCompanion toCompanion(bool nullToAbsent) {
-    return CategoriesCompanion(id: Value(id), name: Value(name));
+    return CategoriesCompanion(
+      id: Value(id),
+      name: Value(name),
+      taxRate: Value(taxRate),
+    );
   }
 
   factory Category.fromJson(
@@ -110,6 +134,7 @@ class Category extends DataClass implements Insertable<Category> {
     return Category(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      taxRate: serializer.fromJson<int>(json['taxRate']),
     );
   }
   @override
@@ -118,15 +143,20 @@ class Category extends DataClass implements Insertable<Category> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'taxRate': serializer.toJson<int>(taxRate),
     };
   }
 
-  Category copyWith({int? id, String? name}) =>
-      Category(id: id ?? this.id, name: name ?? this.name);
+  Category copyWith({int? id, String? name, int? taxRate}) => Category(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    taxRate: taxRate ?? this.taxRate,
+  );
   Category copyWithCompanion(CategoriesCompanion data) {
     return Category(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      taxRate: data.taxRate.present ? data.taxRate.value : this.taxRate,
     );
   }
 
@@ -134,42 +164,59 @@ class Category extends DataClass implements Insertable<Category> {
   String toString() {
     return (StringBuffer('Category(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('taxRate: $taxRate')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name);
+  int get hashCode => Object.hash(id, name, taxRate);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Category && other.id == this.id && other.name == this.name);
+      (other is Category &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.taxRate == this.taxRate);
 }
 
 class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int> id;
   final Value<String> name;
+  final Value<int> taxRate;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.taxRate = const Value.absent(),
   });
   CategoriesCompanion.insert({
     this.id = const Value.absent(),
     required String name,
+    this.taxRate = const Value.absent(),
   }) : name = Value(name);
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<int>? taxRate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (taxRate != null) 'tax_rate': taxRate,
     });
   }
 
-  CategoriesCompanion copyWith({Value<int>? id, Value<String>? name}) {
-    return CategoriesCompanion(id: id ?? this.id, name: name ?? this.name);
+  CategoriesCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<int>? taxRate,
+  }) {
+    return CategoriesCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      taxRate: taxRate ?? this.taxRate,
+    );
   }
 
   @override
@@ -181,6 +228,9 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (taxRate.present) {
+      map['tax_rate'] = Variable<int>(taxRate.value);
+    }
     return map;
   }
 
@@ -188,7 +238,8 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   String toString() {
     return (StringBuffer('CategoriesCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('taxRate: $taxRate')
           ..write(')'))
         .toString();
   }
@@ -218,10 +269,6 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
     'name',
     aliasedName,
     false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 1,
-      maxTextLength: 100,
-    ),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
@@ -406,10 +453,6 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     'name',
     aliasedName,
     false,
-    additionalChecks: GeneratedColumn.checkTextLength(
-      minTextLength: 1,
-      maxTextLength: 100,
-    ),
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
@@ -792,6 +835,21 @@ class $PricesTable extends Prices with TableInfo<$PricesTable, Price> {
     type: DriftSqlType.int,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _isTaxIncludedMeta = const VerificationMeta(
+    'isTaxIncluded',
+  );
+  @override
+  late final GeneratedColumn<bool> isTaxIncluded = GeneratedColumn<bool>(
+    'is_tax_included',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("is_tax_included" IN (0, 1))',
+    ),
+    defaultValue: const Constant(true),
+  );
   static const VerificationMeta _dateMeta = const VerificationMeta('date');
   @override
   late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
@@ -819,6 +877,7 @@ class $PricesTable extends Prices with TableInfo<$PricesTable, Price> {
     productId,
     shopId,
     price,
+    isTaxIncluded,
     date,
     createdAt,
   ];
@@ -861,6 +920,15 @@ class $PricesTable extends Prices with TableInfo<$PricesTable, Price> {
     } else if (isInserting) {
       context.missing(_priceMeta);
     }
+    if (data.containsKey('is_tax_included')) {
+      context.handle(
+        _isTaxIncludedMeta,
+        isTaxIncluded.isAcceptableOrUnknown(
+          data['is_tax_included']!,
+          _isTaxIncludedMeta,
+        ),
+      );
+    }
     if (data.containsKey('date')) {
       context.handle(
         _dateMeta,
@@ -900,6 +968,10 @@ class $PricesTable extends Prices with TableInfo<$PricesTable, Price> {
         DriftSqlType.int,
         data['${effectivePrefix}price'],
       )!,
+      isTaxIncluded: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}is_tax_included'],
+      )!,
       date: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}date'],
@@ -922,6 +994,7 @@ class Price extends DataClass implements Insertable<Price> {
   final int productId;
   final int shopId;
   final int price;
+  final bool isTaxIncluded;
   final DateTime date;
   final DateTime createdAt;
   const Price({
@@ -929,6 +1002,7 @@ class Price extends DataClass implements Insertable<Price> {
     required this.productId,
     required this.shopId,
     required this.price,
+    required this.isTaxIncluded,
     required this.date,
     required this.createdAt,
   });
@@ -939,6 +1013,7 @@ class Price extends DataClass implements Insertable<Price> {
     map['product_id'] = Variable<int>(productId);
     map['shop_id'] = Variable<int>(shopId);
     map['price'] = Variable<int>(price);
+    map['is_tax_included'] = Variable<bool>(isTaxIncluded);
     map['date'] = Variable<DateTime>(date);
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -950,6 +1025,7 @@ class Price extends DataClass implements Insertable<Price> {
       productId: Value(productId),
       shopId: Value(shopId),
       price: Value(price),
+      isTaxIncluded: Value(isTaxIncluded),
       date: Value(date),
       createdAt: Value(createdAt),
     );
@@ -965,6 +1041,7 @@ class Price extends DataClass implements Insertable<Price> {
       productId: serializer.fromJson<int>(json['productId']),
       shopId: serializer.fromJson<int>(json['shopId']),
       price: serializer.fromJson<int>(json['price']),
+      isTaxIncluded: serializer.fromJson<bool>(json['isTaxIncluded']),
       date: serializer.fromJson<DateTime>(json['date']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
@@ -977,6 +1054,7 @@ class Price extends DataClass implements Insertable<Price> {
       'productId': serializer.toJson<int>(productId),
       'shopId': serializer.toJson<int>(shopId),
       'price': serializer.toJson<int>(price),
+      'isTaxIncluded': serializer.toJson<bool>(isTaxIncluded),
       'date': serializer.toJson<DateTime>(date),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
@@ -987,6 +1065,7 @@ class Price extends DataClass implements Insertable<Price> {
     int? productId,
     int? shopId,
     int? price,
+    bool? isTaxIncluded,
     DateTime? date,
     DateTime? createdAt,
   }) => Price(
@@ -994,6 +1073,7 @@ class Price extends DataClass implements Insertable<Price> {
     productId: productId ?? this.productId,
     shopId: shopId ?? this.shopId,
     price: price ?? this.price,
+    isTaxIncluded: isTaxIncluded ?? this.isTaxIncluded,
     date: date ?? this.date,
     createdAt: createdAt ?? this.createdAt,
   );
@@ -1003,6 +1083,9 @@ class Price extends DataClass implements Insertable<Price> {
       productId: data.productId.present ? data.productId.value : this.productId,
       shopId: data.shopId.present ? data.shopId.value : this.shopId,
       price: data.price.present ? data.price.value : this.price,
+      isTaxIncluded: data.isTaxIncluded.present
+          ? data.isTaxIncluded.value
+          : this.isTaxIncluded,
       date: data.date.present ? data.date.value : this.date,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
@@ -1015,6 +1098,7 @@ class Price extends DataClass implements Insertable<Price> {
           ..write('productId: $productId, ')
           ..write('shopId: $shopId, ')
           ..write('price: $price, ')
+          ..write('isTaxIncluded: $isTaxIncluded, ')
           ..write('date: $date, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -1023,7 +1107,7 @@ class Price extends DataClass implements Insertable<Price> {
 
   @override
   int get hashCode =>
-      Object.hash(id, productId, shopId, price, date, createdAt);
+      Object.hash(id, productId, shopId, price, isTaxIncluded, date, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -1032,6 +1116,7 @@ class Price extends DataClass implements Insertable<Price> {
           other.productId == this.productId &&
           other.shopId == this.shopId &&
           other.price == this.price &&
+          other.isTaxIncluded == this.isTaxIncluded &&
           other.date == this.date &&
           other.createdAt == this.createdAt);
 }
@@ -1041,6 +1126,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
   final Value<int> productId;
   final Value<int> shopId;
   final Value<int> price;
+  final Value<bool> isTaxIncluded;
   final Value<DateTime> date;
   final Value<DateTime> createdAt;
   const PricesCompanion({
@@ -1048,6 +1134,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
     this.productId = const Value.absent(),
     this.shopId = const Value.absent(),
     this.price = const Value.absent(),
+    this.isTaxIncluded = const Value.absent(),
     this.date = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
@@ -1056,6 +1143,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
     required int productId,
     required int shopId,
     required int price,
+    this.isTaxIncluded = const Value.absent(),
     required DateTime date,
     this.createdAt = const Value.absent(),
   }) : productId = Value(productId),
@@ -1067,6 +1155,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
     Expression<int>? productId,
     Expression<int>? shopId,
     Expression<int>? price,
+    Expression<bool>? isTaxIncluded,
     Expression<DateTime>? date,
     Expression<DateTime>? createdAt,
   }) {
@@ -1075,6 +1164,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
       if (productId != null) 'product_id': productId,
       if (shopId != null) 'shop_id': shopId,
       if (price != null) 'price': price,
+      if (isTaxIncluded != null) 'is_tax_included': isTaxIncluded,
       if (date != null) 'date': date,
       if (createdAt != null) 'created_at': createdAt,
     });
@@ -1085,6 +1175,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
     Value<int>? productId,
     Value<int>? shopId,
     Value<int>? price,
+    Value<bool>? isTaxIncluded,
     Value<DateTime>? date,
     Value<DateTime>? createdAt,
   }) {
@@ -1093,6 +1184,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
       productId: productId ?? this.productId,
       shopId: shopId ?? this.shopId,
       price: price ?? this.price,
+      isTaxIncluded: isTaxIncluded ?? this.isTaxIncluded,
       date: date ?? this.date,
       createdAt: createdAt ?? this.createdAt,
     );
@@ -1113,6 +1205,9 @@ class PricesCompanion extends UpdateCompanion<Price> {
     if (price.present) {
       map['price'] = Variable<int>(price.value);
     }
+    if (isTaxIncluded.present) {
+      map['is_tax_included'] = Variable<bool>(isTaxIncluded.value);
+    }
     if (date.present) {
       map['date'] = Variable<DateTime>(date.value);
     }
@@ -1129,6 +1224,7 @@ class PricesCompanion extends UpdateCompanion<Price> {
           ..write('productId: $productId, ')
           ..write('shopId: $shopId, ')
           ..write('price: $price, ')
+          ..write('isTaxIncluded: $isTaxIncluded, ')
           ..write('date: $date, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
@@ -1156,9 +1252,17 @@ abstract class _$AppDatabase extends GeneratedDatabase {
 }
 
 typedef $$CategoriesTableCreateCompanionBuilder =
-    CategoriesCompanion Function({Value<int> id, required String name});
+    CategoriesCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<int> taxRate,
+    });
 typedef $$CategoriesTableUpdateCompanionBuilder =
-    CategoriesCompanion Function({Value<int> id, Value<String> name});
+    CategoriesCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<int> taxRate,
+    });
 
 final class $$CategoriesTableReferences
     extends BaseReferences<_$AppDatabase, $CategoriesTable, Category> {
@@ -1200,6 +1304,11 @@ class $$CategoriesTableFilterComposer
 
   ColumnFilters<String> get name => $composableBuilder(
     column: $table.name,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get taxRate => $composableBuilder(
+    column: $table.taxRate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1247,6 +1356,11 @@ class $$CategoriesTableOrderingComposer
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<int> get taxRate => $composableBuilder(
+    column: $table.taxRate,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$CategoriesTableAnnotationComposer
@@ -1263,6 +1377,9 @@ class $$CategoriesTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<int> get taxRate =>
+      $composableBuilder(column: $table.taxRate, builder: (column) => column);
 
   Expression<T> productsRefs<T extends Object>(
     Expression<T> Function($$ProductsTableAnnotationComposer a) f,
@@ -1320,10 +1437,18 @@ class $$CategoriesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-              }) => CategoriesCompanion(id: id, name: name),
+                Value<int> taxRate = const Value.absent(),
+              }) => CategoriesCompanion(id: id, name: name, taxRate: taxRate),
           createCompanionCallback:
-              ({Value<int> id = const Value.absent(), required String name}) =>
-                  CategoriesCompanion.insert(id: id, name: name),
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<int> taxRate = const Value.absent(),
+              }) => CategoriesCompanion.insert(
+                id: id,
+                name: name,
+                taxRate: taxRate,
+              ),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) => (
@@ -1995,6 +2120,7 @@ typedef $$PricesTableCreateCompanionBuilder =
       required int productId,
       required int shopId,
       required int price,
+      Value<bool> isTaxIncluded,
       required DateTime date,
       Value<DateTime> createdAt,
     });
@@ -2004,6 +2130,7 @@ typedef $$PricesTableUpdateCompanionBuilder =
       Value<int> productId,
       Value<int> shopId,
       Value<int> price,
+      Value<bool> isTaxIncluded,
       Value<DateTime> date,
       Value<DateTime> createdAt,
     });
@@ -2063,6 +2190,11 @@ class $$PricesTableFilterComposer
 
   ColumnFilters<int> get price => $composableBuilder(
     column: $table.price,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get isTaxIncluded => $composableBuilder(
+    column: $table.isTaxIncluded,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2142,6 +2274,11 @@ class $$PricesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<bool> get isTaxIncluded => $composableBuilder(
+    column: $table.isTaxIncluded,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get date => $composableBuilder(
     column: $table.date,
     builder: (column) => ColumnOrderings(column),
@@ -2213,6 +2350,11 @@ class $$PricesTableAnnotationComposer
 
   GeneratedColumn<int> get price =>
       $composableBuilder(column: $table.price, builder: (column) => column);
+
+  GeneratedColumn<bool> get isTaxIncluded => $composableBuilder(
+    column: $table.isTaxIncluded,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get date =>
       $composableBuilder(column: $table.date, builder: (column) => column);
@@ -2299,6 +2441,7 @@ class $$PricesTableTableManager
                 Value<int> productId = const Value.absent(),
                 Value<int> shopId = const Value.absent(),
                 Value<int> price = const Value.absent(),
+                Value<bool> isTaxIncluded = const Value.absent(),
                 Value<DateTime> date = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PricesCompanion(
@@ -2306,6 +2449,7 @@ class $$PricesTableTableManager
                 productId: productId,
                 shopId: shopId,
                 price: price,
+                isTaxIncluded: isTaxIncluded,
                 date: date,
                 createdAt: createdAt,
               ),
@@ -2315,6 +2459,7 @@ class $$PricesTableTableManager
                 required int productId,
                 required int shopId,
                 required int price,
+                Value<bool> isTaxIncluded = const Value.absent(),
                 required DateTime date,
                 Value<DateTime> createdAt = const Value.absent(),
               }) => PricesCompanion.insert(
@@ -2322,6 +2467,7 @@ class $$PricesTableTableManager
                 productId: productId,
                 shopId: shopId,
                 price: price,
+                isTaxIncluded: isTaxIncluded,
                 date: date,
                 createdAt: createdAt,
               ),

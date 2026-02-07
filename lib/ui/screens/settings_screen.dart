@@ -81,36 +81,65 @@ class _CategoryList extends ConsumerWidget {
 
   Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
+    int taxRate = 10;
+
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New Category'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                final database = ref.read(databaseProvider);
-                database
-                    .into(database.categories)
-                    .insert(
-                      CategoriesCompanion(name: drift.Value(controller.text)),
-                    );
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('New Category'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                    autofocus: true,
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(
+                    value: taxRate,
+                    decoration: const InputDecoration(labelText: 'Tax Rate'),
+                    items: const [
+                      DropdownMenuItem(value: 8, child: Text('8% (Reduced)')),
+                      DropdownMenuItem(
+                        value: 10,
+                        child: Text('10% (Standard)'),
+                      ),
+                    ],
+                    onChanged: (v) => setState(() => taxRate = v!),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (controller.text.isNotEmpty) {
+                      final database = ref.read(databaseProvider);
+                      database
+                          .into(database.categories)
+                          .insert(
+                            CategoriesCompanion(
+                              name: drift.Value(controller.text),
+                              taxRate: drift.Value(taxRate),
+                            ),
+                          );
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text('Add'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
