@@ -35,13 +35,13 @@ class $CategoriesTable extends Categories
     'taxRate',
   );
   @override
-  late final GeneratedColumn<int> taxRate = GeneratedColumn<int>(
+  late final GeneratedColumn<double> taxRate = GeneratedColumn<double>(
     'tax_rate',
     aliasedName,
     false,
-    type: DriftSqlType.int,
+    type: DriftSqlType.double,
     requiredDuringInsert: false,
-    defaultValue: const Constant(10),
+    defaultValue: const Constant(10.0),
   );
   @override
   List<GeneratedColumn> get $columns => [id, name, taxRate];
@@ -92,7 +92,7 @@ class $CategoriesTable extends Categories
         data['${effectivePrefix}name'],
       )!,
       taxRate: attachedDatabase.typeMapping.read(
-        DriftSqlType.int,
+        DriftSqlType.double,
         data['${effectivePrefix}tax_rate'],
       )!,
     );
@@ -107,14 +107,14 @@ class $CategoriesTable extends Categories
 class Category extends DataClass implements Insertable<Category> {
   final int id;
   final String name;
-  final int taxRate;
+  final double taxRate;
   const Category({required this.id, required this.name, required this.taxRate});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
-    map['tax_rate'] = Variable<int>(taxRate);
+    map['tax_rate'] = Variable<double>(taxRate);
     return map;
   }
 
@@ -134,7 +134,7 @@ class Category extends DataClass implements Insertable<Category> {
     return Category(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
-      taxRate: serializer.fromJson<int>(json['taxRate']),
+      taxRate: serializer.fromJson<double>(json['taxRate']),
     );
   }
   @override
@@ -143,11 +143,11 @@ class Category extends DataClass implements Insertable<Category> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
-      'taxRate': serializer.toJson<int>(taxRate),
+      'taxRate': serializer.toJson<double>(taxRate),
     };
   }
 
-  Category copyWith({int? id, String? name, int? taxRate}) => Category(
+  Category copyWith({int? id, String? name, double? taxRate}) => Category(
     id: id ?? this.id,
     name: name ?? this.name,
     taxRate: taxRate ?? this.taxRate,
@@ -184,7 +184,7 @@ class Category extends DataClass implements Insertable<Category> {
 class CategoriesCompanion extends UpdateCompanion<Category> {
   final Value<int> id;
   final Value<String> name;
-  final Value<int> taxRate;
+  final Value<double> taxRate;
   const CategoriesCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
@@ -198,7 +198,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   static Insertable<Category> custom({
     Expression<int>? id,
     Expression<String>? name,
-    Expression<int>? taxRate,
+    Expression<double>? taxRate,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -210,7 +210,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
   CategoriesCompanion copyWith({
     Value<int>? id,
     Value<String>? name,
-    Value<int>? taxRate,
+    Value<double>? taxRate,
   }) {
     return CategoriesCompanion(
       id: id ?? this.id,
@@ -229,7 +229,7 @@ class CategoriesCompanion extends UpdateCompanion<Category> {
       map['name'] = Variable<String>(name.value);
     }
     if (taxRate.present) {
-      map['tax_rate'] = Variable<int>(taxRate.value);
+      map['tax_rate'] = Variable<double>(taxRate.value);
     }
     return map;
   }
@@ -481,6 +481,15 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _emojiMeta = const VerificationMeta('emoji');
+  @override
+  late final GeneratedColumn<String> emoji = GeneratedColumn<String>(
+    'emoji',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -499,6 +508,7 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     name,
     categoryId,
     imagePath,
+    emoji,
     createdAt,
   ];
   @override
@@ -538,6 +548,12 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         imagePath.isAcceptableOrUnknown(data['image_path']!, _imagePathMeta),
       );
     }
+    if (data.containsKey('emoji')) {
+      context.handle(
+        _emojiMeta,
+        emoji.isAcceptableOrUnknown(data['emoji']!, _emojiMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -569,6 +585,10 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.string,
         data['${effectivePrefix}image_path'],
       ),
+      emoji: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}emoji'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -587,12 +607,14 @@ class Product extends DataClass implements Insertable<Product> {
   final String name;
   final int categoryId;
   final String? imagePath;
+  final String? emoji;
   final DateTime createdAt;
   const Product({
     required this.id,
     required this.name,
     required this.categoryId,
     this.imagePath,
+    this.emoji,
     required this.createdAt,
   });
   @override
@@ -603,6 +625,9 @@ class Product extends DataClass implements Insertable<Product> {
     map['category_id'] = Variable<int>(categoryId);
     if (!nullToAbsent || imagePath != null) {
       map['image_path'] = Variable<String>(imagePath);
+    }
+    if (!nullToAbsent || emoji != null) {
+      map['emoji'] = Variable<String>(emoji);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -616,6 +641,9 @@ class Product extends DataClass implements Insertable<Product> {
       imagePath: imagePath == null && nullToAbsent
           ? const Value.absent()
           : Value(imagePath),
+      emoji: emoji == null && nullToAbsent
+          ? const Value.absent()
+          : Value(emoji),
       createdAt: Value(createdAt),
     );
   }
@@ -630,6 +658,7 @@ class Product extends DataClass implements Insertable<Product> {
       name: serializer.fromJson<String>(json['name']),
       categoryId: serializer.fromJson<int>(json['categoryId']),
       imagePath: serializer.fromJson<String?>(json['imagePath']),
+      emoji: serializer.fromJson<String?>(json['emoji']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -641,6 +670,7 @@ class Product extends DataClass implements Insertable<Product> {
       'name': serializer.toJson<String>(name),
       'categoryId': serializer.toJson<int>(categoryId),
       'imagePath': serializer.toJson<String?>(imagePath),
+      'emoji': serializer.toJson<String?>(emoji),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -650,12 +680,14 @@ class Product extends DataClass implements Insertable<Product> {
     String? name,
     int? categoryId,
     Value<String?> imagePath = const Value.absent(),
+    Value<String?> emoji = const Value.absent(),
     DateTime? createdAt,
   }) => Product(
     id: id ?? this.id,
     name: name ?? this.name,
     categoryId: categoryId ?? this.categoryId,
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
+    emoji: emoji.present ? emoji.value : this.emoji,
     createdAt: createdAt ?? this.createdAt,
   );
   Product copyWithCompanion(ProductsCompanion data) {
@@ -666,6 +698,7 @@ class Product extends DataClass implements Insertable<Product> {
           ? data.categoryId.value
           : this.categoryId,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
+      emoji: data.emoji.present ? data.emoji.value : this.emoji,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -677,13 +710,15 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('name: $name, ')
           ..write('categoryId: $categoryId, ')
           ..write('imagePath: $imagePath, ')
+          ..write('emoji: $emoji, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name, categoryId, imagePath, createdAt);
+  int get hashCode =>
+      Object.hash(id, name, categoryId, imagePath, emoji, createdAt);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -692,6 +727,7 @@ class Product extends DataClass implements Insertable<Product> {
           other.name == this.name &&
           other.categoryId == this.categoryId &&
           other.imagePath == this.imagePath &&
+          other.emoji == this.emoji &&
           other.createdAt == this.createdAt);
 }
 
@@ -700,12 +736,14 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<String> name;
   final Value<int> categoryId;
   final Value<String?> imagePath;
+  final Value<String?> emoji;
   final Value<DateTime> createdAt;
   const ProductsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
     this.categoryId = const Value.absent(),
     this.imagePath = const Value.absent(),
+    this.emoji = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -713,6 +751,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required String name,
     required int categoryId,
     this.imagePath = const Value.absent(),
+    this.emoji = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name),
        categoryId = Value(categoryId);
@@ -721,6 +760,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<String>? name,
     Expression<int>? categoryId,
     Expression<String>? imagePath,
+    Expression<String>? emoji,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -728,6 +768,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (name != null) 'name': name,
       if (categoryId != null) 'category_id': categoryId,
       if (imagePath != null) 'image_path': imagePath,
+      if (emoji != null) 'emoji': emoji,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -737,6 +778,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<String>? name,
     Value<int>? categoryId,
     Value<String?>? imagePath,
+    Value<String?>? emoji,
     Value<DateTime>? createdAt,
   }) {
     return ProductsCompanion(
@@ -744,6 +786,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       name: name ?? this.name,
       categoryId: categoryId ?? this.categoryId,
       imagePath: imagePath ?? this.imagePath,
+      emoji: emoji ?? this.emoji,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -763,6 +806,9 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (imagePath.present) {
       map['image_path'] = Variable<String>(imagePath.value);
     }
+    if (emoji.present) {
+      map['emoji'] = Variable<String>(emoji.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -776,6 +822,7 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('name: $name, ')
           ..write('categoryId: $categoryId, ')
           ..write('imagePath: $imagePath, ')
+          ..write('emoji: $emoji, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1255,13 +1302,13 @@ typedef $$CategoriesTableCreateCompanionBuilder =
     CategoriesCompanion Function({
       Value<int> id,
       required String name,
-      Value<int> taxRate,
+      Value<double> taxRate,
     });
 typedef $$CategoriesTableUpdateCompanionBuilder =
     CategoriesCompanion Function({
       Value<int> id,
       Value<String> name,
-      Value<int> taxRate,
+      Value<double> taxRate,
     });
 
 final class $$CategoriesTableReferences
@@ -1307,7 +1354,7 @@ class $$CategoriesTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
-  ColumnFilters<int> get taxRate => $composableBuilder(
+  ColumnFilters<double> get taxRate => $composableBuilder(
     column: $table.taxRate,
     builder: (column) => ColumnFilters(column),
   );
@@ -1357,7 +1404,7 @@ class $$CategoriesTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
-  ColumnOrderings<int> get taxRate => $composableBuilder(
+  ColumnOrderings<double> get taxRate => $composableBuilder(
     column: $table.taxRate,
     builder: (column) => ColumnOrderings(column),
   );
@@ -1378,7 +1425,7 @@ class $$CategoriesTableAnnotationComposer
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
 
-  GeneratedColumn<int> get taxRate =>
+  GeneratedColumn<double> get taxRate =>
       $composableBuilder(column: $table.taxRate, builder: (column) => column);
 
   Expression<T> productsRefs<T extends Object>(
@@ -1437,13 +1484,13 @@ class $$CategoriesTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-                Value<int> taxRate = const Value.absent(),
+                Value<double> taxRate = const Value.absent(),
               }) => CategoriesCompanion(id: id, name: name, taxRate: taxRate),
           createCompanionCallback:
               ({
                 Value<int> id = const Value.absent(),
                 required String name,
-                Value<int> taxRate = const Value.absent(),
+                Value<double> taxRate = const Value.absent(),
               }) => CategoriesCompanion.insert(
                 id: id,
                 name: name,
@@ -1726,6 +1773,7 @@ typedef $$ProductsTableCreateCompanionBuilder =
       required String name,
       required int categoryId,
       Value<String?> imagePath,
+      Value<String?> emoji,
       Value<DateTime> createdAt,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -1734,6 +1782,7 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<String> name,
       Value<int> categoryId,
       Value<String?> imagePath,
+      Value<String?> emoji,
       Value<DateTime> createdAt,
     });
 
@@ -1801,6 +1850,11 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<String> get imagePath => $composableBuilder(
     column: $table.imagePath,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get emoji => $composableBuilder(
+    column: $table.emoji,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1882,6 +1936,11 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get emoji => $composableBuilder(
+    column: $table.emoji,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1928,6 +1987,9 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<String> get imagePath =>
       $composableBuilder(column: $table.imagePath, builder: (column) => column);
+
+  GeneratedColumn<String> get emoji =>
+      $composableBuilder(column: $table.emoji, builder: (column) => column);
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2013,12 +2075,14 @@ class $$ProductsTableTableManager
                 Value<String> name = const Value.absent(),
                 Value<int> categoryId = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
+                Value<String?> emoji = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
                 name: name,
                 categoryId: categoryId,
                 imagePath: imagePath,
+                emoji: emoji,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2027,12 +2091,14 @@ class $$ProductsTableTableManager
                 required String name,
                 required int categoryId,
                 Value<String?> imagePath = const Value.absent(),
+                Value<String?> emoji = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
                 name: name,
                 categoryId: categoryId,
                 imagePath: imagePath,
+                emoji: emoji,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0

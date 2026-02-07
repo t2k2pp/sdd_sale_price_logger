@@ -9,9 +9,12 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class AddEntryScreen extends ConsumerStatefulWidget {
-  const AddEntryScreen({super.key});
+  final Product? initialProduct;
+
+  const AddEntryScreen({super.key, this.initialProduct});
 
   @override
   ConsumerState<AddEntryScreen> createState() => _AddEntryScreenState();
@@ -26,11 +29,18 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   DateTime _selectedDate = DateTime.now();
 
   @override
+  void initState() {
+    super.initState();
+    _selectedProduct = widget.initialProduct;
+  }
+
+  @override
   Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Log Price')),
+      appBar: AppBar(title: Text(l10n.addPrice)),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -49,8 +59,8 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         }
                         final products = snapshot.data!;
                         return DropdownButtonFormField<Product>(
-                          decoration: const InputDecoration(
-                            labelText: 'Product',
+                          decoration: InputDecoration(
+                            labelText: l10n.productName,
                           ),
                           value: _selectedProduct,
                           items: products.map((product) {
@@ -64,8 +74,9 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                               _selectedProduct = value;
                             });
                           },
-                          validator: (value) =>
-                              value == null ? 'Please select a product' : null,
+                          validator: (value) => value == null
+                              ? l10n.error('Please select a product')
+                              : null,
                         );
                       },
                     ),
@@ -90,7 +101,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         }
                         final shops = snapshot.data!;
                         return DropdownButtonFormField<Shop>(
-                          decoration: const InputDecoration(labelText: 'Shop'),
+                          decoration: InputDecoration(labelText: l10n.shop),
                           value: _selectedShop,
                           items: shops.map((shop) {
                             return DropdownMenuItem(
@@ -103,8 +114,9 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                               _selectedShop = value;
                             });
                           },
-                          validator: (value) =>
-                              value == null ? 'Please select a shop' : null,
+                          validator: (value) => value == null
+                              ? l10n.error('Please select a shop')
+                              : null,
                         );
                       },
                     ),
@@ -122,17 +134,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _priceController,
-                      decoration: const InputDecoration(
-                        labelText: 'Price',
+                      decoration: InputDecoration(
+                        labelText: l10n.price,
                         suffixText: '¥',
                       ),
                       keyboardType: TextInputType.number,
                       validator: (value) {
                         if (value == null || value.isEmpty) {
-                          return 'Please enter a price';
+                          return l10n.error('Please enter a price');
                         }
                         if (int.tryParse(value) == null) {
-                          return 'Please enter a valid number';
+                          return l10n.error('Please enter a valid number');
                         }
                         return null;
                       },
@@ -146,14 +158,14 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         _isTaxIncluded = index == 0;
                       });
                     },
-                    children: const [
+                    children: [
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('税込'),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(l10n.taxIncluded),
                       ),
                       Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
-                        child: Text('税抜'),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        child: Text(l10n.taxExcluded),
                       ),
                     ],
                   ),
@@ -163,7 +175,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
 
               // Date Selection
               ListTile(
-                title: const Text('Date'),
+                title: Text(l10n.date),
                 subtitle: Text(DateFormat.yMMMd().format(_selectedDate)),
                 trailing: const Icon(Icons.calendar_today),
                 onTap: () async {
@@ -182,7 +194,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
               ),
               const SizedBox(height: 32),
 
-              ElevatedButton(onPressed: _savePrice, child: const Text('Save')),
+              ElevatedButton(onPressed: _savePrice, child: Text(l10n.save)),
             ],
           ),
         ),
@@ -215,6 +227,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     AppDatabase database,
   ) async {
     final nameController = TextEditingController();
+    final emojiController = TextEditingController();
     Category? selectedCategory;
     String? imagePath;
     final ImagePicker picker = ImagePicker();
@@ -223,17 +236,18 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     await showDialog(
       context: context,
       builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('New Product'),
+              title: Text(l10n.newProduct),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextField(
                       controller: nameController,
-                      decoration: const InputDecoration(labelText: 'Name'),
+                      decoration: InputDecoration(labelText: l10n.name),
                     ),
                     const SizedBox(height: 16),
                     Row(
@@ -248,8 +262,8 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                                 return const CircularProgressIndicator();
                               }
                               return DropdownButtonFormField<Category>(
-                                decoration: const InputDecoration(
-                                  labelText: 'Category',
+                                decoration: InputDecoration(
+                                  labelText: l10n.category,
                                 ),
                                 value: selectedCategory,
                                 items: snapshot.data!.map((c) {
@@ -302,9 +316,18 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                             }
                           },
                           icon: const Icon(Icons.camera_alt),
-                          label: const Text('Photo'),
+                          label: Text(l10n.photo),
                         ),
                       ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: emojiController,
+                      decoration: InputDecoration(
+                        labelText: l10n.emoji,
+                        helperText: 'e.g. 🍎, 🥦',
+                      ),
+                      maxLength: 1,
                     ),
                   ],
                 ),
@@ -312,7 +335,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () async {
@@ -325,6 +348,11 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                               name: drift.Value(nameController.text),
                               categoryId: drift.Value(selectedCategory!.id),
                               imagePath: drift.Value(imagePath),
+                              emoji: drift.Value(
+                                emojiController.text.isEmpty
+                                    ? null
+                                    : emojiController.text,
+                              ),
                             ),
                           );
 
@@ -333,7 +361,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       }
                     }
                   },
-                  child: const Text('Add'),
+                  child: Text(l10n.add),
                 ),
               ],
             );
@@ -351,16 +379,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     await showDialog(
       context: context,
       builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
         return AlertDialog(
-          title: const Text('Add Shop'),
+          title: Text(l10n.addShop),
           content: TextField(
             controller: controller,
-            decoration: const InputDecoration(labelText: 'Shop Name'),
+            decoration: InputDecoration(labelText: l10n.name),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
+              child: Text(l10n.cancel),
             ),
             TextButton(
               onPressed: () async {
@@ -375,7 +404,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   }
                 }
               },
-              child: const Text('Add'),
+              child: Text(l10n.add),
             ),
           ],
         );
@@ -388,42 +417,45 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     AppDatabase database,
   ) async {
     final controller = TextEditingController();
-    int taxRate = 10;
+    double taxRate = 10.0;
     await showDialog(
       context: context,
       builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('Add Category'),
+              title: Text(l10n.addCategory),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: controller,
-                    decoration: const InputDecoration(
-                      labelText: 'Category Name',
-                    ),
+                    decoration: InputDecoration(labelText: l10n.name),
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: taxRate,
-                    decoration: const InputDecoration(labelText: 'Tax Rate'),
-                    items: const [
-                      DropdownMenuItem(value: 8, child: Text('8% (Reduced)')),
-                      DropdownMenuItem(
-                        value: 10,
-                        child: Text('10% (Standard)'),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => taxRate = v!),
+                  TextFormField(
+                    initialValue: taxRate.toString(),
+                    decoration: InputDecoration(
+                      labelText: l10n.taxRate,
+                      suffixText: '%',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (v) {
+                      final val = double.tryParse(v);
+                      if (val != null) {
+                        setState(() => taxRate = val);
+                      }
+                    },
                   ),
                 ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () async {
@@ -441,7 +473,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       }
                     }
                   },
-                  child: const Text('Add'),
+                  child: Text(l10n.add),
                 ),
               ],
             );

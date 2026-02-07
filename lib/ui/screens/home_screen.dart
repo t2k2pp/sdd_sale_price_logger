@@ -68,6 +68,17 @@ class HomeScreen extends ConsumerWidget {
                         errorBuilder: (context, error, stackTrace) =>
                             const Icon(Icons.broken_image),
                       )
+                    : product.emoji != null
+                    ? SizedBox(
+                        width: 50,
+                        height: 50,
+                        child: Center(
+                          child: Text(
+                            product.emoji!,
+                            style: const TextStyle(fontSize: 30),
+                          ),
+                        ),
+                      )
                     : const Icon(Icons.image_not_supported),
                 title: Text(product.name),
                 subtitle: Text(category?.name ?? 'No Category'),

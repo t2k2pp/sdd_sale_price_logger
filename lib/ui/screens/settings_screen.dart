@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -23,14 +24,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Data'),
+        title: Text(l10n.settings),
         bottom: TabBar(
           controller: _tabController,
-          tabs: const [
-            Tab(text: 'Categories'),
-            Tab(text: 'Shops'),
+          tabs: [
+            Tab(text: l10n.categories),
+            Tab(text: l10n.shops),
           ],
         ),
       ),
@@ -64,10 +66,11 @@ class _CategoryList extends ConsumerWidget {
         return ListView.builder(
           itemCount: categories.length + 1,
           itemBuilder: (context, index) {
+            final l10n = AppLocalizations.of(context)!;
             if (index == categories.length) {
               return ListTile(
                 leading: const Icon(Icons.add),
-                title: const Text('Add Category'),
+                title: Text(l10n.addCategory),
                 onTap: () => _showAddDialog(context, ref),
               );
             }
@@ -81,42 +84,47 @@ class _CategoryList extends ConsumerWidget {
 
   Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
     final controller = TextEditingController();
-    int taxRate = 10;
+    double taxRate = 10.0;
 
     await showDialog(
       context: context,
       builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
         return StatefulBuilder(
           builder: (context, setState) {
             return AlertDialog(
-              title: const Text('New Category'),
+              title: Text(l10n.addCategory),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
                     controller: controller,
-                    decoration: const InputDecoration(labelText: 'Name'),
+                    decoration: InputDecoration(labelText: l10n.name),
                     autofocus: true,
                   ),
                   const SizedBox(height: 16),
-                  DropdownButtonFormField<int>(
-                    value: taxRate,
-                    decoration: const InputDecoration(labelText: 'Tax Rate'),
-                    items: const [
-                      DropdownMenuItem(value: 8, child: Text('8% (Reduced)')),
-                      DropdownMenuItem(
-                        value: 10,
-                        child: Text('10% (Standard)'),
-                      ),
-                    ],
-                    onChanged: (v) => setState(() => taxRate = v!),
+                  TextFormField(
+                    initialValue: taxRate.toString(),
+                    decoration: InputDecoration(
+                      labelText: l10n.taxRate,
+                      suffixText: '%',
+                    ),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    onChanged: (v) {
+                      final val = double.tryParse(v);
+                      if (val != null) {
+                        setState(() => taxRate = val);
+                      }
+                    },
                   ),
                 ],
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Cancel'),
+                  child: Text(l10n.cancel),
                 ),
                 TextButton(
                   onPressed: () {
@@ -133,7 +141,7 @@ class _CategoryList extends ConsumerWidget {
                       Navigator.pop(context);
                     }
                   },
-                  child: const Text('Add'),
+                  child: Text(l10n.add),
                 ),
               ],
             );
@@ -166,10 +174,11 @@ class _ShopList extends ConsumerWidget {
         return ListView.builder(
           itemCount: shops.length + 1,
           itemBuilder: (context, index) {
+            final l10n = AppLocalizations.of(context)!;
             if (index == shops.length) {
               return ListTile(
                 leading: const Icon(Icons.add),
-                title: const Text('Add Shop'),
+                title: Text(l10n.addShop),
                 onTap: () => _showAddDialog(context, ref),
               );
             }
@@ -185,32 +194,37 @@ class _ShopList extends ConsumerWidget {
     final controller = TextEditingController();
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('New Shop'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(labelText: 'Name'),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder: (context) {
+        final l10n = AppLocalizations.of(context)!;
+        return AlertDialog(
+          title: Text(l10n.addShop),
+          content: TextField(
+            controller: controller,
+            decoration: InputDecoration(labelText: l10n.name),
+            autofocus: true,
           ),
-          TextButton(
-            onPressed: () {
-              if (controller.text.isNotEmpty) {
-                final database = ref.read(databaseProvider);
-                database
-                    .into(database.shops)
-                    .insert(ShopsCompanion(name: drift.Value(controller.text)));
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Add'),
-          ),
-        ],
-      ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            TextButton(
+              onPressed: () {
+                if (controller.text.isNotEmpty) {
+                  final database = ref.read(databaseProvider);
+                  database
+                      .into(database.shops)
+                      .insert(
+                        ShopsCompanion(name: drift.Value(controller.text)),
+                      );
+                  Navigator.pop(context);
+                }
+              },
+              child: Text(l10n.add),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -1,0 +1,40 @@
+{
+  "@@locale": "en",
+  "appTitle": "Sales Price Logger",
+  "homeTitle": "Sales Price Logger",
+  "recentProducts": "Recent Products",
+  "noProductsYet": "No products yet.",
+  "noPriceHistory": "No price history yet.",
+  "addPrice": "Add Price",
+  "settings": "Settings",
+  "categories": "Categories",
+  "shops": "Shops",
+  "addCategory": "Add Category",
+  "addShop": "Add Shop",
+  "name": "Name",
+  "cancel": "Cancel",
+  "add": "Add",
+  "save": "Save",
+  "productName": "Product Name",
+  "category": "Category",
+  "shop": "Shop",
+  "price": "Price",
+  "date": "Date",
+  "photo": "Photo",
+  "newProduct": "New Product",
+  "history": "History",
+  "bestPrice": "Best Price",
+  "taxIncluded": "Tax Included",
+  "taxExcluded": "Tax Excluded",
+  "taxRate": "Tax Rate",
+  "taxIncludedLabel": "Tax In",
+  "taxExcludedLabel": "Tax Ex",
+  "error": "Error: {message}",
+  "@error": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  }
+}

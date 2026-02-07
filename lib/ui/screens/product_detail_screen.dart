@@ -1,10 +1,13 @@
+import 'dart:io';
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
 import '../widgets/price_history_chart.dart';
+import 'add_entry_screen.dart';
 
 class ProductDetailScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -22,12 +25,31 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final database = ref.watch(databaseProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(title: Text(widget.product.name)),
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Center(
+                child: widget.product.imagePath != null
+                    ? Image.file(
+                        File(widget.product.imagePath!),
+                        height: 150,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.broken_image, size: 100),
+                      )
+                    : Text(
+                        widget.product.emoji ?? '📦',
+                        style: const TextStyle(fontSize: 80),
+                      ),
+              ),
+            ),
             // Period Selector
             Padding(
               padding: const EdgeInsets.all(8.0),
@@ -82,7 +104,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       .watch(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
+                  return Center(
+                    child: Text(l10n.error(snapshot.error.toString())),
+                  );
                 }
                 if (!snapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
@@ -94,10 +118,10 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                     .toList();
 
                 if (prices.isEmpty) {
-                  return const Center(
+                  return Center(
                     child: Padding(
-                      padding: EdgeInsets.all(32.0),
-                      child: Text('No price history yet.'),
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(l10n.noPriceHistory),
                     ),
                   );
                 }
@@ -129,8 +153,8 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                 }
 
                 final bestPriceDisplay = bestIsTaxIncluded
-                    ? '¥$bestPriceRaw (税込)'
-                    : '¥$bestPriceRaw (税抜) -> ¥${minEffectivePrice.toStringAsFixed(0)} (税込)';
+                    ? '¥$bestPriceRaw (${l10n.taxIncludedLabel})'
+                    : '¥$bestPriceRaw (${l10n.taxExcludedLabel}) -> ¥${minEffectivePrice.toStringAsFixed(0)} (${l10n.taxIncludedLabel})';
 
                 return Column(
                   children: [
@@ -144,7 +168,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                             Icons.thumb_up,
                             color: Colors.green,
                           ),
-                          title: const Text('Best Price (Tax In)'),
+                          title: Text(
+                            '${l10n.bestPrice} (${l10n.taxIncludedLabel})',
+                          ),
                           subtitle: Text('$bestPriceDisplay at $bestShop'),
                         ),
                       ),
@@ -161,11 +187,11 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                       ),
                     ),
                     const Divider(),
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
                       child: Text(
-                        'History',
-                        style: TextStyle(
+                        l10n.history,
+                        style: const TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -179,7 +205,9 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
                         final row = results[index];
                         final price = row.readTable(database.prices);
                         final shop = row.readTable(database.shops);
-                        final taxLabel = price.isTaxIncluded ? '税込' : '税抜';
+                        final taxLabel = price.isTaxIncluded
+                            ? l10n.taxIncludedLabel
+                            : l10n.taxExcludedLabel;
 
                         return ListTile(
                           title: Text('¥${price.price} ($taxLabel)'),
@@ -195,6 +223,18 @@ class _ProductDetailScreenState extends ConsumerState<ProductDetailScreen> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) =>
+                  AddEntryScreen(initialProduct: widget.product),
+            ),
+          );
+        },
+        tooltip: l10n.addPrice,
+        child: const Icon(Icons.add),
       ),
     );
   }

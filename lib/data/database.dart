@@ -11,7 +11,7 @@ class Categories extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
   // Default tax rate in percent (e.g. 8 or 10)
-  IntColumn get taxRate => integer().withDefault(const Constant(10))();
+  RealColumn get taxRate => real().withDefault(const Constant(10.0))();
 }
 
 class Shops extends Table {
@@ -24,6 +24,7 @@ class Products extends Table {
   TextColumn get name => text()();
   IntColumn get categoryId => integer().references(Categories, #id)();
   TextColumn get imagePath => text().nullable()();
+  TextColumn get emoji => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -43,7 +44,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration {
@@ -55,6 +56,9 @@ class AppDatabase extends _$AppDatabase {
         if (from < 2) {
           await m.addColumn(categories, categories.taxRate);
           await m.addColumn(prices, prices.isTaxIncluded);
+        }
+        if (from < 4) {
+          await m.addColumn(products, products.emoji);
         }
       },
     );
