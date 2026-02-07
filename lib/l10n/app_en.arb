@@ -29,6 +29,7 @@
   "taxRate": "Tax Rate",
   "taxIncludedLabel": "Tax In",
   "taxExcludedLabel": "Tax Ex",
+  "emoji": "Emoji (Optional)",
   "error": "Error: {message}",
   "@error": {
     "placeholders": {

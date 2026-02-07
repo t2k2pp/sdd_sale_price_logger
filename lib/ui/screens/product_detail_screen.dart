@@ -3,7 +3,7 @@ import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
 import '../widgets/price_history_chart.dart';

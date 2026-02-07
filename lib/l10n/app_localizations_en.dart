@@ -96,6 +96,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get taxExcludedLabel => 'Tax Ex';
 
   @override
+  String get emoji => 'Emoji (Optional)';
+
+  @override
   String error(String message) {
     return 'Error: $message';
   }

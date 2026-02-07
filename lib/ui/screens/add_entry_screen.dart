@@ -9,7 +9,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as p;
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
 
 class AddEntryScreen extends ConsumerStatefulWidget {
   final Product? initialProduct;

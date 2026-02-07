@@ -29,5 +29,6 @@
   "taxRate": "税率",
   "taxIncludedLabel": "税込",
   "taxExcludedLabel": "税抜",
+  "emoji": "絵文字 (任意)",
   "error": "エラー: {message}"
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
+import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
 import 'ui/screens/home_screen.dart';
 
 void main() {

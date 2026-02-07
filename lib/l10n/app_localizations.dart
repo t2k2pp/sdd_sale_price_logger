@@ -272,6 +272,12 @@ abstract class AppLocalizations {
   /// **'Tax Ex'**
   String get taxExcludedLabel;
 
+  /// No description provided for @emoji.
+  ///
+  /// In en, this message translates to:
+  /// **'Emoji (Optional)'**
+  String get emoji;
+
   /// No description provided for @error.
   ///
   /// In en, this message translates to:
