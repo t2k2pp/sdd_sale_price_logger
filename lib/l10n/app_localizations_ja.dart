@@ -102,4 +102,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String error(String message) {
     return 'エラー: $message';
   }
+
+  @override
+  String get searchHint => '商品やカテゴリを検索...';
+
+  @override
+  String get noProductsFound => '商品が見つかりません。';
 }

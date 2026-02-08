@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
 import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
+import '../dialogs/upsert_shop_dialog.dart';
+import '../dialogs/upsert_product_dialog.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -71,79 +73,100 @@ class _CategoryList extends ConsumerWidget {
               return ListTile(
                 leading: const Icon(Icons.add),
                 title: Text(l10n.addCategory),
-                onTap: () => _showAddDialog(context, ref),
+                onTap: () async {
+                  await showUpsertCategoryDialog(context, database);
+                },
               );
             }
             final category = categories[index];
-            return ListTile(title: Text(category.name));
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    double taxRate = 10.0;
-
-    await showDialog(
-      context: context,
-      builder: (context) {
-        final l10n = AppLocalizations.of(context)!;
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              title: Text(l10n.addCategory),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: controller,
-                    decoration: InputDecoration(labelText: l10n.name),
-                    autofocus: true,
+            return ListTile(
+              title: Text(category.name),
+              subtitle: Text('${l10n.taxRate}: ${category.taxRate}%'),
+              onTap: () async {
+                await showUpsertCategoryDialog(
+                  context,
+                  database,
+                  existingCategory: category,
+                );
+              },
+              onLongPress: () async {
+                // Check dependencies
+                final productsCount =
+                    await (database.select(database.products)
+                          ..where((t) => t.categoryId.equals(category.id)))
+                        .get()
+                        .then((l) => l.length);
+                // Need to join to count prices via products
+                // Or simple query: select count(*) from prices join products on ... where products.category_id = ...
+                // Drift approach:
+                final priceCountQuery = database.select(database.prices).join([
+                  drift.innerJoin(
+                    database.products,
+                    database.products.id.equalsExp(database.prices.productId),
                   ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    initialValue: taxRate.toString(),
-                    decoration: InputDecoration(
-                      labelText: l10n.taxRate,
-                      suffixText: '%',
+                ])..where(database.products.categoryId.equals(category.id));
+                final priceCount = await priceCountQuery.get().then(
+                  (l) => l.length,
+                );
+
+                if (!context.mounted) return;
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Category?'),
+                    content: Text(
+                      'Deleting this category will delete $productsCount products and $priceCount price records.',
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    onChanged: (v) {
-                      final val = double.tryParse(v);
-                      if (val != null) {
-                        setState(() => taxRate = val);
-                      }
-                    },
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(l10n.cancel),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          // Cascade Delete safely
+                          await database.transaction(() async {
+                            // 1. Delete prices for products in this category
+                            // We need IDs of products to delete prices efficiently or use join delete if supported (Drift delete with join is tricky).
+                            // Easier: Fetch product IDs first.
+                            final products =
+                                await (database.select(database.products)
+                                      ..where(
+                                        (t) => t.categoryId.equals(category.id),
+                                      ))
+                                    .get();
+                            final productIds = products
+                                .map((p) => p.id)
+                                .toList();
+
+                            if (productIds.isNotEmpty) {
+                              await (database.delete(
+                                    database.prices,
+                                  )..where((t) => t.productId.isIn(productIds)))
+                                  .go();
+                            }
+                            // 2. Delete products
+                            await (database.delete(database.products)..where(
+                                  (t) => t.categoryId.equals(category.id),
+                                ))
+                                .go();
+                            // 3. Delete category
+                            await (database.delete(
+                              database.categories,
+                            )..where((t) => t.id.equals(category.id))).go();
+                          });
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: Text(l10n.cancel),
-                ),
-                TextButton(
-                  onPressed: () {
-                    if (controller.text.isNotEmpty) {
-                      final database = ref.read(databaseProvider);
-                      database
-                          .into(database.categories)
-                          .insert(
-                            CategoriesCompanion(
-                              name: drift.Value(controller.text),
-                              taxRate: drift.Value(taxRate),
-                            ),
-                          );
-                      Navigator.pop(context);
-                    }
-                  },
-                  child: Text(l10n.add),
-                ),
-              ],
+                );
+              },
             );
           },
         );
@@ -179,50 +202,65 @@ class _ShopList extends ConsumerWidget {
               return ListTile(
                 leading: const Icon(Icons.add),
                 title: Text(l10n.addShop),
-                onTap: () => _showAddDialog(context, ref),
+                onTap: () async {
+                  await showUpsertShopDialog(context, database);
+                },
               );
             }
             final shop = shops[index];
-            return ListTile(title: Text(shop.name));
-          },
-        );
-      },
-    );
-  }
-
-  Future<void> _showAddDialog(BuildContext context, WidgetRef ref) async {
-    final controller = TextEditingController();
-    await showDialog(
-      context: context,
-      builder: (context) {
-        final l10n = AppLocalizations.of(context)!;
-        return AlertDialog(
-          title: Text(l10n.addShop),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(labelText: l10n.name),
-            autofocus: true,
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text(l10n.cancel),
-            ),
-            TextButton(
-              onPressed: () {
-                if (controller.text.isNotEmpty) {
-                  final database = ref.read(databaseProvider);
-                  database
-                      .into(database.shops)
-                      .insert(
-                        ShopsCompanion(name: drift.Value(controller.text)),
-                      );
-                  Navigator.pop(context);
-                }
+            return ListTile(
+              title: Text(shop.name),
+              onTap: () async {
+                await showUpsertShopDialog(
+                  context,
+                  database,
+                  existingShop: shop,
+                );
               },
-              child: Text(l10n.add),
-            ),
-          ],
+              onLongPress: () async {
+                final count =
+                    await (database.select(database.prices)
+                          ..where((t) => t.shopId.equals(shop.id)))
+                        .get()
+                        .then((l) => l.length);
+
+                if (!context.mounted) return;
+
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Delete Shop?'),
+                    content: Text(
+                      'Deleting this shop will delete $count price records.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text(l10n.cancel),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          await database.transaction(() async {
+                            await (database.delete(
+                              database.prices,
+                            )..where((t) => t.shopId.equals(shop.id))).go();
+                            await (database.delete(
+                              database.shops,
+                            )..where((t) => t.id.equals(shop.id))).go();
+                          });
+                          if (context.mounted) Navigator.pop(context);
+                        },
+                        child: const Text(
+                          'Delete',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
         );
       },
     );

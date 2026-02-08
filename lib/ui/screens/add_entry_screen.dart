@@ -10,11 +10,13 @@ import 'package:path/path.dart' as p;
 import '../../data/database.dart';
 import '../../providers/database_provider.dart';
 import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
+import 'package:emoji_picker_flutter/emoji_picker_flutter.dart' as emoji;
 
 class AddEntryScreen extends ConsumerStatefulWidget {
   final Product? initialProduct;
+  final Price? entryToEdit;
 
-  const AddEntryScreen({super.key, this.initialProduct});
+  const AddEntryScreen({super.key, this.initialProduct, this.entryToEdit});
 
   @override
   ConsumerState<AddEntryScreen> createState() => _AddEntryScreenState();
@@ -24,7 +26,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   final _formKey = GlobalKey<FormState>();
   Product? _selectedProduct;
   Shop? _selectedShop;
-  final _priceController = TextEditingController();
+  late TextEditingController _priceController;
   bool _isTaxIncluded = true;
   DateTime _selectedDate = DateTime.now();
 
@@ -32,6 +34,75 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   void initState() {
     super.initState();
     _selectedProduct = widget.initialProduct;
+    final entry = widget.entryToEdit;
+    if (entry != null) {
+      _priceController = TextEditingController(text: entry.price.toString());
+      _isTaxIncluded = entry.isTaxIncluded;
+      _selectedDate = entry.date;
+      // We need to fetch Shop and Product if not set?
+      // Product might be passed in initialProduct, but if editing from History list...
+      // The history list has the product.
+      // We need to set _selectedShop and _selectedProduct based on IDs.
+      // But _selectedShop needs the Shop object.
+      // Unlike String, we need the object from the list to make Dropdown work well
+      // (equality check).
+      // However, we don't have the list here yet (it's in the stream).
+      // We can use `useEffect` or just let the StreamBuilder handle it?
+      // No, we need to set the initial value.
+      // Better: Fetch the explicit Shop/Product in initState?
+      // Or: The Dropdown value `_selectedShop` can be null initially,
+      // but we need to match it when data arrives.
+      // But `_selectedShop` holds the object.
+      // Strategy: In build, if `_selectedShop` is null AND `entryToEdit` is not null,
+      // try to find the shop in the snapshot and set it?
+      // That's risky (setState during build).
+      // Better: Load the specific Shop/Product in initState async (or just assume we have them if passed?)
+      // We only have IDs in `Price`.
+      // Let's rely on `ref.read` in initState? No, should replace `initState` logic or use `FutureBuilder`?
+      // Simpler: The caller (ProductDetailScreen) likely has the Product and Shop objects!
+      // Pass them in!
+    } else {
+      _priceController = TextEditingController();
+    }
+  }
+
+  // Helper to load initial data if editing
+  Future<void> _loadInitialDataIfEditing() async {
+    if (widget.entryToEdit == null) return;
+    final db = ref.read(databaseProvider);
+
+    // If shop not set, fetch it
+    if (_selectedShop == null) {
+      final shop =
+          await (db.select(db.shops)
+                ..where((t) => t.id.equals(widget.entryToEdit!.shopId)))
+              .getSingleOrNull();
+      if (shop != null && mounted) {
+        setState(() {
+          _selectedShop = shop;
+        });
+      }
+    }
+    // If product not set
+    if (_selectedProduct == null) {
+      final product =
+          await (db.select(db.products)
+                ..where((t) => t.id.equals(widget.entryToEdit!.productId)))
+              .getSingleOrNull();
+      if (product != null && mounted) {
+        setState(() {
+          _selectedProduct = product;
+        });
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (widget.entryToEdit != null) {
+      _loadInitialDataIfEditing();
+    }
   }
 
   @override
@@ -57,7 +128,11 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         if (!snapshot.hasData) {
                           return const CircularProgressIndicator();
                         }
-                        final products = snapshot.data!;
+                        var products = snapshot.data!;
+                        if (_selectedProduct != null &&
+                            !products.contains(_selectedProduct)) {
+                          products = [...products, _selectedProduct!];
+                        }
                         return DropdownButtonFormField<Product>(
                           decoration: InputDecoration(
                             labelText: l10n.productName,
@@ -83,7 +158,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () => _showAddProductDialog(context, database),
+                    onPressed: () async {
+                      final newProduct = await _showAddProductDialog(
+                        context,
+                        database,
+                      );
+                      if (newProduct != null) {
+                        setState(() {
+                          _selectedProduct = newProduct;
+                        });
+                      }
+                    },
                   ),
                 ],
               ),
@@ -99,7 +184,11 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         if (!snapshot.hasData) {
                           return const CircularProgressIndicator();
                         }
-                        final shops = snapshot.data!;
+                        var shops = snapshot.data!;
+                        if (_selectedShop != null &&
+                            !shops.contains(_selectedShop)) {
+                          shops = [...shops, _selectedShop!];
+                        }
                         return DropdownButtonFormField<Shop>(
                           decoration: InputDecoration(labelText: l10n.shop),
                           value: _selectedShop,
@@ -123,7 +212,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   ),
                   IconButton(
                     icon: const Icon(Icons.add),
-                    onPressed: () => _showAddShopDialog(context, database),
+                    onPressed: () async {
+                      final newShop = await _showAddShopDialog(
+                        context,
+                        database,
+                      );
+                      if (newShop != null) {
+                        setState(() {
+                          _selectedShop = newShop;
+                        });
+                      }
+                    },
                   ),
                 ],
               ),
@@ -205,24 +304,38 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
   Future<void> _savePrice() async {
     if (_formKey.currentState!.validate()) {
       final database = ref.read(databaseProvider);
-      await database
-          .into(database.prices)
-          .insert(
-            PricesCompanion(
-              productId: drift.Value(_selectedProduct!.id),
-              shopId: drift.Value(_selectedShop!.id),
-              price: drift.Value(int.parse(_priceController.text)),
-              isTaxIncluded: drift.Value(_isTaxIncluded),
-              date: drift.Value(_selectedDate),
-            ),
-          );
+
+      if (widget.entryToEdit != null) {
+        // Update
+        final updated = widget.entryToEdit!.copyWith(
+          productId: _selectedProduct!.id,
+          shopId: _selectedShop!.id,
+          price: int.parse(_priceController.text),
+          isTaxIncluded: _isTaxIncluded,
+          date: _selectedDate,
+        );
+        await database.prices.replaceOne(updated);
+      } else {
+        // Insert
+        await database
+            .into(database.prices)
+            .insert(
+              PricesCompanion(
+                productId: drift.Value(_selectedProduct!.id),
+                shopId: drift.Value(_selectedShop!.id),
+                price: drift.Value(int.parse(_priceController.text)),
+                isTaxIncluded: drift.Value(_isTaxIncluded),
+                date: drift.Value(_selectedDate),
+              ),
+            );
+      }
       if (mounted) {
         Navigator.pop(context);
       }
     }
   }
 
-  Future<void> _showAddProductDialog(
+  Future<Product?> _showAddProductDialog(
     BuildContext context,
     AppDatabase database,
   ) async {
@@ -231,6 +344,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
     Category? selectedCategory;
     String? imagePath;
     final ImagePicker picker = ImagePicker();
+    Product? createdProduct;
 
     // Need a stateful builder for the dialog to handle dropdown and image changes
     await showDialog(
@@ -261,12 +375,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                               if (!snapshot.hasData) {
                                 return const CircularProgressIndicator();
                               }
+                              var categories = snapshot.data!;
+                              if (selectedCategory != null &&
+                                  !categories.contains(selectedCategory)) {
+                                categories = [...categories, selectedCategory!];
+                              }
                               return DropdownButtonFormField<Category>(
                                 decoration: InputDecoration(
                                   labelText: l10n.category,
                                 ),
                                 value: selectedCategory,
-                                items: snapshot.data!.map((c) {
+                                items: categories.map((c) {
                                   return DropdownMenuItem(
                                     value: c,
                                     child: Text(c.name),
@@ -280,8 +399,17 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         ),
                         IconButton(
                           icon: const Icon(Icons.add),
-                          onPressed: () =>
-                              _showAddCategoryDialog(context, database),
+                          onPressed: () async {
+                            final newCategory = await _showAddCategoryDialog(
+                              context,
+                              database,
+                            );
+                            if (newCategory != null) {
+                              setState(() {
+                                selectedCategory = newCategory;
+                              });
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -321,13 +449,65 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    TextField(
-                      controller: emojiController,
-                      decoration: InputDecoration(
-                        labelText: l10n.emoji,
-                        helperText: 'e.g. 🍎, 🥦',
-                      ),
-                      maxLength: 1,
+                    Row(
+                      children: [
+                        Text(
+                          '${l10n.emoji}: ',
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: () {
+                            showModalBottomSheet(
+                              context: context,
+                              builder: (context) {
+                                return emoji.EmojiPicker(
+                                  onEmojiSelected:
+                                      (
+                                        emoji.Category? category,
+                                        emoji.Emoji emojiStr,
+                                      ) {
+                                        emojiController.text = emojiStr.emoji;
+                                        Navigator.pop(context);
+                                      },
+                                  config: emoji.Config(
+                                    height: 256,
+                                    checkPlatformCompatibility: true,
+                                    viewOrderConfig:
+                                        const emoji.ViewOrderConfig(),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                          child: Container(
+                            width: 50,
+                            height: 50,
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Center(
+                              child: ValueListenableBuilder(
+                                valueListenable: emojiController,
+                                builder: (context, value, child) {
+                                  return Text(
+                                    value.text.isEmpty ? '😀' : value.text,
+                                    style: const TextStyle(fontSize: 24),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ),
+                        if (emojiController.text.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.clear),
+                            onPressed: () {
+                              emojiController.clear();
+                            },
+                          ),
+                      ],
                     ),
                   ],
                 ),
@@ -341,9 +521,9 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                   onPressed: () async {
                     if (nameController.text.isNotEmpty &&
                         selectedCategory != null) {
-                      await database
+                      createdProduct = await database
                           .into(database.products)
-                          .insert(
+                          .insertReturning(
                             ProductsCompanion(
                               name: drift.Value(nameController.text),
                               categoryId: drift.Value(selectedCategory!.id),
@@ -369,13 +549,15 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
         );
       },
     );
+    return createdProduct;
   }
 
-  Future<void> _showAddShopDialog(
+  Future<Shop?> _showAddShopDialog(
     BuildContext context,
     AppDatabase database,
   ) async {
     final controller = TextEditingController();
+    Shop? createdShop;
     await showDialog(
       context: context,
       builder: (context) {
@@ -394,9 +576,9 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
             TextButton(
               onPressed: () async {
                 if (controller.text.isNotEmpty) {
-                  await database
+                  createdShop = await database
                       .into(database.shops)
-                      .insert(
+                      .insertReturning(
                         ShopsCompanion(name: drift.Value(controller.text)),
                       );
                   if (context.mounted) {
@@ -410,14 +592,16 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
         );
       },
     );
+    return createdShop;
   }
 
-  Future<void> _showAddCategoryDialog(
+  Future<Category?> _showAddCategoryDialog(
     BuildContext context,
     AppDatabase database,
   ) async {
     final controller = TextEditingController();
     double taxRate = 10.0;
+    Category? createdCategory;
     await showDialog(
       context: context,
       builder: (context) {
@@ -460,9 +644,9 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                 TextButton(
                   onPressed: () async {
                     if (controller.text.isNotEmpty) {
-                      await database
+                      createdCategory = await database
                           .into(database.categories)
-                          .insert(
+                          .insertReturning(
                             CategoriesCompanion(
                               name: drift.Value(controller.text),
                               taxRate: drift.Value(taxRate),
@@ -481,5 +665,6 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
         );
       },
     );
+    return createdCategory;
   }
 }

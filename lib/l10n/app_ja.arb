@@ -30,5 +30,7 @@
   "taxIncludedLabel": "税込",
   "taxExcludedLabel": "税抜",
   "emoji": "絵文字 (任意)",
-  "error": "エラー: {message}"
+  "error": "エラー: {message}",
+  "searchHint": "商品やカテゴリを検索...",
+  "noProductsFound": "商品が見つかりません。"
 }
