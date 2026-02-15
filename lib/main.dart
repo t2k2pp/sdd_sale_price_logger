@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sdd_sale_price_logger/l10n/app_localizations.dart';
-import 'ui/screens/home_screen.dart';
+import 'ui/screens/main_screen.dart';
 
 void main() {
   runApp(const ProviderScope(child: MyApp()));
@@ -20,7 +20,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const HomeScreen(),
+      home: const MainScreen(),
     );
   }
 }
