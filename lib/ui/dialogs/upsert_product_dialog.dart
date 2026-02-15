@@ -57,7 +57,7 @@ Future<Category?> showUpsertCategoryDialog(
                 onPressed: () => Navigator.pop(context),
                 child: Text(l10n.cancel),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () async {
                   if (controller.text.isNotEmpty) {
                     if (isEdit) {
@@ -93,6 +93,76 @@ Future<Category?> showUpsertCategoryDialog(
   return result;
 }
 
+/// Show a bottom sheet to pick camera or gallery
+Future<ImageSource?> _showImageSourcePicker(BuildContext context) async {
+  final l10n = AppLocalizations.of(context)!;
+  return showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (context) {
+      return SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  l10n.selectImageSource,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.primaryContainer,
+                  child: Icon(
+                    Icons.camera_alt,
+                    color: Theme.of(context).colorScheme.onPrimaryContainer,
+                  ),
+                ),
+                title: Text(l10n.camera),
+                onTap: () => Navigator.pop(context, ImageSource.camera),
+              ),
+              ListTile(
+                leading: CircleAvatar(
+                  backgroundColor: Theme.of(
+                    context,
+                  ).colorScheme.secondaryContainer,
+                  child: Icon(
+                    Icons.photo_library,
+                    color: Theme.of(context).colorScheme.onSecondaryContainer,
+                  ),
+                ),
+                title: Text(l10n.gallery),
+                onTap: () => Navigator.pop(context, ImageSource.gallery),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+/// Pick image from selected source and save to app documents
+Future<String?> _pickAndSaveImage(
+  BuildContext context,
+  ImagePicker picker,
+) async {
+  final source = await _showImageSourcePicker(context);
+  if (source == null) return null;
+
+  final XFile? image = await picker.pickImage(source: source);
+  if (image == null) return null;
+
+  final directory = await getApplicationDocumentsDirectory();
+  final name = p.basename(image.path);
+  final savedImage = await File(image.path).copy('${directory.path}/$name');
+  return savedImage.path;
+}
+
 Future<Product?> showUpsertProductDialog(
   BuildContext context,
   AppDatabase database, {
@@ -100,10 +170,20 @@ Future<Product?> showUpsertProductDialog(
 }) async {
   final nameController = TextEditingController(text: existingProduct?.name);
   final emojiController = TextEditingController(text: existingProduct?.emoji);
+  final volumeController = TextEditingController(
+    text: existingProduct?.volume != null
+        ? (existingProduct!.volume! % 1 == 0
+              ? existingProduct.volume!.toInt().toString()
+              : existingProduct.volume.toString())
+        : '',
+  );
   Category? selectedCategory;
   String? imagePath = existingProduct?.imagePath;
+  String? selectedVolumeUnit = existingProduct?.volumeUnit;
   final ImagePicker picker = ImagePicker();
   Product? result;
+
+  final volumeUnits = ['g', 'kg', 'ml', 'L', 'pcs'];
 
   // If editing, fetch the current category
   if (existingProduct != null) {
@@ -123,18 +203,18 @@ Future<Product?> showUpsertProductDialog(
       return StatefulBuilder(
         builder: (context, setState) {
           return AlertDialog(
-            title: Text(
-              isEdit ? 'Edit Product' : l10n.newProduct,
-            ), // Need l10n for Edit
+            title: Text(isEdit ? l10n.editProduct : l10n.newProduct),
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Product Name
                   TextField(
                     controller: nameController,
                     decoration: InputDecoration(labelText: l10n.name),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  // Category
                   Row(
                     children: [
                       Expanded(
@@ -144,26 +224,12 @@ Future<Product?> showUpsertProductDialog(
                             if (!snapshot.hasData) {
                               return const CircularProgressIndicator();
                             }
-                            var categories = snapshot.data!;
-                            // Ensure selected category is in list (incase of deletion/etc logic, though here it's stream)
-                            if (selectedCategory != null &&
-                                !categories
-                                    .map((e) => e.id)
-                                    .contains(selectedCategory!.id)) {
-                              // If locally selected category is not in stream (e.g. just added?), append it?
-                              // Stream should have it.
-                            }
-
+                            final categories = snapshot.data!;
                             return DropdownButtonFormField<Category>(
                               decoration: InputDecoration(
                                 labelText: l10n.category,
                               ),
-                              value:
-                                  selectedCategory, // Objects must implement == correctly or use ID
-                              // Category is a data class, equality checks all fields.
-                              // If fields changed in DB, equality might fail.
-                              // Better to use ID for value, or ensure objects match.
-                              // For simplicity, let's try object. If it fails, I'll switch to ID.
+                              value: selectedCategory,
                               items: categories.map((c) {
                                 return DropdownMenuItem(
                                   value: c,
@@ -192,46 +258,95 @@ Future<Product?> showUpsertProductDialog(
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  // Volume Input (F4)
                   Row(
                     children: [
-                      if (imagePath != null)
-                        Image.file(
-                          File(imagePath!),
-                          width: 50,
-                          height: 50,
-                          fit: BoxFit.cover,
-                        )
-                      else
-                        const Icon(Icons.image, size: 50, color: Colors.grey),
-                      TextButton.icon(
-                        onPressed: () async {
-                          final XFile? image = await picker.pickImage(
-                            source: ImageSource.camera,
-                          );
-                          if (image != null) {
-                            final directory =
-                                await getApplicationDocumentsDirectory();
-                            final name = p.basename(image.path);
-                            final savedImage = await File(
-                              image.path,
-                            ).copy('${directory.path}/$name');
-                            setState(() {
-                              imagePath = savedImage.path;
-                            });
-                          }
-                        },
-                        icon: const Icon(Icons.camera_alt),
-                        label: Text(l10n.photo),
+                      Expanded(
+                        flex: 2,
+                        child: TextField(
+                          controller: volumeController,
+                          decoration: InputDecoration(
+                            labelText: l10n.volume,
+                            hintText: '300',
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 1,
+                        child: DropdownButtonFormField<String>(
+                          decoration: InputDecoration(
+                            labelText: l10n.volumeUnit,
+                          ),
+                          value: selectedVolumeUnit,
+                          items: volumeUnits.map((u) {
+                            return DropdownMenuItem(value: u, child: Text(u));
+                          }).toList(),
+                          onChanged: (v) =>
+                              setState(() => selectedVolumeUnit = v),
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 12),
+                  // Photo (F8 - Camera/Gallery selection)
+                  Row(
+                    children: [
+                      if (imagePath != null)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: Image.file(
+                            File(imagePath!),
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                          ),
+                        )
+                      else
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.image,
+                            size: 28,
+                            color: Theme.of(context).colorScheme.outline,
+                          ),
+                        ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () async {
+                          final path = await _pickAndSaveImage(context, picker);
+                          if (path != null) {
+                            setState(() => imagePath = path);
+                          }
+                        },
+                        icon: const Icon(Icons.add_a_photo_outlined),
+                        label: Text(l10n.photo),
+                      ),
+                      if (imagePath != null)
+                        IconButton(
+                          icon: const Icon(Icons.clear, size: 18),
+                          onPressed: () => setState(() => imagePath = null),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Emoji
                   Row(
                     children: [
                       Text(
                         '${l10n.emoji}: ',
-                        style: const TextStyle(fontSize: 16),
+                        style: const TextStyle(fontSize: 14),
                       ),
                       const SizedBox(width: 8),
                       GestureDetector(
@@ -259,10 +374,12 @@ Future<Product?> showUpsertProductDialog(
                           );
                         },
                         child: Container(
-                          width: 50,
-                          height: 50,
+                          width: 48,
+                          height: 48,
                           decoration: BoxDecoration(
-                            border: Border.all(color: Colors.grey),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.outline,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Center(
@@ -280,7 +397,7 @@ Future<Product?> showUpsertProductDialog(
                       ),
                       if (emojiController.text.isNotEmpty)
                         IconButton(
-                          icon: const Icon(Icons.clear),
+                          icon: const Icon(Icons.clear, size: 18),
                           onPressed: () {
                             emojiController.clear();
                           },
@@ -295,10 +412,11 @@ Future<Product?> showUpsertProductDialog(
                 onPressed: () => Navigator.pop(context),
                 child: Text(l10n.cancel),
               ),
-              TextButton(
+              FilledButton(
                 onPressed: () async {
                   if (nameController.text.isNotEmpty &&
                       selectedCategory != null) {
+                    final vol = double.tryParse(volumeController.text);
                     if (isEdit) {
                       final updated = existingProduct.copyWith(
                         name: nameController.text,
@@ -308,6 +426,12 @@ Future<Product?> showUpsertProductDialog(
                           emojiController.text.isEmpty
                               ? null
                               : emojiController.text,
+                        ),
+                        volume: drift.Value(vol),
+                        volumeUnit: drift.Value(
+                          selectedVolumeUnit?.isEmpty ?? true
+                              ? null
+                              : selectedVolumeUnit,
                         ),
                       );
                       await database.products.replaceOne(updated);
@@ -324,6 +448,12 @@ Future<Product?> showUpsertProductDialog(
                                 emojiController.text.isEmpty
                                     ? null
                                     : emojiController.text,
+                              ),
+                              volume: drift.Value(vol),
+                              volumeUnit: drift.Value(
+                                selectedVolumeUnit?.isEmpty ?? true
+                                    ? null
+                                    : selectedVolumeUnit,
                               ),
                             ),
                           );
