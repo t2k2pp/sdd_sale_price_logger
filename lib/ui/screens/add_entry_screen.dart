@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:drift/drift.dart' as drift;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -111,7 +109,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                           decoration: InputDecoration(
                             labelText: l10n.productName,
                           ),
-                          value: _selectedProduct,
+                          initialValue: _selectedProduct,
                           items: products.map((product) {
                             return DropdownMenuItem(
                               value: product,
@@ -165,7 +163,7 @@ class _AddEntryScreenState extends ConsumerState<AddEntryScreen> {
                         }
                         return DropdownButtonFormField<Shop>(
                           decoration: InputDecoration(labelText: l10n.shop),
-                          value: _selectedShop,
+                          initialValue: _selectedShop,
                           items: shops.map((shop) {
                             return DropdownMenuItem(
                               value: shop,

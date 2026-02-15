@@ -229,7 +229,7 @@ Future<Product?> showUpsertProductDialog(
                               decoration: InputDecoration(
                                 labelText: l10n.category,
                               ),
-                              value: selectedCategory,
+                              initialValue: selectedCategory,
                               items: categories.map((c) {
                                 return DropdownMenuItem(
                                   value: c,
@@ -282,7 +282,7 @@ Future<Product?> showUpsertProductDialog(
                           decoration: InputDecoration(
                             labelText: l10n.volumeUnit,
                           ),
-                          value: selectedVolumeUnit,
+                          initialValue: selectedVolumeUnit,
                           items: volumeUnits.map((u) {
                             return DropdownMenuItem(value: u, child: Text(u));
                           }).toList(),

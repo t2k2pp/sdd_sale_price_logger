@@ -87,7 +87,7 @@ Future<ShopEvent?> showUpsertShopEventDialog(
                     // Day of Week
                     DropdownButtonFormField<int?>(
                       decoration: InputDecoration(labelText: l10n.dayOfWeek),
-                      value: dayOfWeek,
+                      initialValue: dayOfWeek,
                       items: [
                         const DropdownMenuItem<int?>(
                           value: null,
@@ -106,7 +106,7 @@ Future<ShopEvent?> showUpsertShopEventDialog(
                     // Day of Month
                     DropdownButtonFormField<int?>(
                       decoration: InputDecoration(labelText: l10n.dayOfMonth),
-                      value: dayOfMonth,
+                      initialValue: dayOfMonth,
                       items: [
                         const DropdownMenuItem<int?>(
                           value: null,
