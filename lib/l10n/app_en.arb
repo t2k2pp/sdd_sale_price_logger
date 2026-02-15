@@ -39,5 +39,63 @@
     }
   },
   "searchHint": "Search products or categories...",
-  "noProductsFound": "No products found."
+  "noProductsFound": "No products found.",
+  "products": "Products",
+  "latestPrice": "Latest",
+  "lowestPrice": "Lowest",
+  "volume": "Volume",
+  "volumeUnit": "Unit",
+  "shopMemo": "Memo",
+  "shopEvents": "Events",
+  "addEvent": "Add Event",
+  "editEvent": "Edit Event",
+  "recurring": "Recurring",
+  "oneTime": "One-time",
+  "dayOfWeek": "Day of Week",
+  "dayOfMonth": "Day of Month",
+  "priceCalculator": "Price Calculator",
+  "calculatePrice": "Calculate",
+  "viewHistory": "View History",
+  "selectImageSource": "Select Image Source",
+  "camera": "Camera",
+  "gallery": "Gallery",
+  "eventTitle": "Event Title",
+  "eventDescription": "Description",
+  "unitPrice": "Unit Price",
+  "monday": "Monday",
+  "tuesday": "Tuesday",
+  "wednesday": "Wednesday",
+  "thursday": "Thursday",
+  "friday": "Friday",
+  "saturday": "Saturday",
+  "sunday": "Sunday",
+  "shopDetail": "Shop Detail",
+  "editShop": "Edit Shop",
+  "deleteShop": "Delete Shop",
+  "deleteEvent": "Delete Event",
+  "noEvents": "No events yet.",
+  "volumeLabel": "{volume} {unit}",
+  "@volumeLabel": {
+    "placeholders": {
+      "volume": { "type": "String" },
+      "unit": { "type": "String" }
+    }
+  },
+  "calculatedPrice": "≈ ¥{price}",
+  "@calculatedPrice": {
+    "placeholders": {
+      "price": { "type": "String" }
+    }
+  },
+  "inputQuantity": "Enter quantity",
+  "gram": "g",
+  "milliliter": "ml",
+  "liter": "L",
+  "piece": "pcs",
+  "kilogram": "kg",
+  "deleteConfirm": "Delete",
+  "editProduct": "Edit Product",
+  "categoryManagement": "Category Management",
+  "noShopsFound": "No shops yet.",
+  "at": "at"
 }

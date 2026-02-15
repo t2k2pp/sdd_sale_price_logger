@@ -108,4 +108,149 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noProductsFound => 'No products found.';
+
+  @override
+  String get products => 'Products';
+
+  @override
+  String get latestPrice => 'Latest';
+
+  @override
+  String get lowestPrice => 'Lowest';
+
+  @override
+  String get volume => 'Volume';
+
+  @override
+  String get volumeUnit => 'Unit';
+
+  @override
+  String get shopMemo => 'Memo';
+
+  @override
+  String get shopEvents => 'Events';
+
+  @override
+  String get addEvent => 'Add Event';
+
+  @override
+  String get editEvent => 'Edit Event';
+
+  @override
+  String get recurring => 'Recurring';
+
+  @override
+  String get oneTime => 'One-time';
+
+  @override
+  String get dayOfWeek => 'Day of Week';
+
+  @override
+  String get dayOfMonth => 'Day of Month';
+
+  @override
+  String get priceCalculator => 'Price Calculator';
+
+  @override
+  String get calculatePrice => 'Calculate';
+
+  @override
+  String get viewHistory => 'View History';
+
+  @override
+  String get selectImageSource => 'Select Image Source';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get eventTitle => 'Event Title';
+
+  @override
+  String get eventDescription => 'Description';
+
+  @override
+  String get unitPrice => 'Unit Price';
+
+  @override
+  String get monday => 'Monday';
+
+  @override
+  String get tuesday => 'Tuesday';
+
+  @override
+  String get wednesday => 'Wednesday';
+
+  @override
+  String get thursday => 'Thursday';
+
+  @override
+  String get friday => 'Friday';
+
+  @override
+  String get saturday => 'Saturday';
+
+  @override
+  String get sunday => 'Sunday';
+
+  @override
+  String get shopDetail => 'Shop Detail';
+
+  @override
+  String get editShop => 'Edit Shop';
+
+  @override
+  String get deleteShop => 'Delete Shop';
+
+  @override
+  String get deleteEvent => 'Delete Event';
+
+  @override
+  String get noEvents => 'No events yet.';
+
+  @override
+  String volumeLabel(String volume, String unit) {
+    return '$volume $unit';
+  }
+
+  @override
+  String calculatedPrice(String price) {
+    return '≈ ¥$price';
+  }
+
+  @override
+  String get inputQuantity => 'Enter quantity';
+
+  @override
+  String get gram => 'g';
+
+  @override
+  String get milliliter => 'ml';
+
+  @override
+  String get liter => 'L';
+
+  @override
+  String get piece => 'pcs';
+
+  @override
+  String get kilogram => 'kg';
+
+  @override
+  String get deleteConfirm => 'Delete';
+
+  @override
+  String get editProduct => 'Edit Product';
+
+  @override
+  String get categoryManagement => 'Category Management';
+
+  @override
+  String get noShopsFound => 'No shops yet.';
+
+  @override
+  String get at => 'at';
 }

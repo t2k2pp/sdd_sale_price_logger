@@ -295,6 +295,288 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No products found.'**
   String get noProductsFound;
+
+  /// No description provided for @products.
+  ///
+  /// In en, this message translates to:
+  /// **'Products'**
+  String get products;
+
+  /// No description provided for @latestPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get latestPrice;
+
+  /// No description provided for @lowestPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Lowest'**
+  String get lowestPrice;
+
+  /// No description provided for @volume.
+  ///
+  /// In en, this message translates to:
+  /// **'Volume'**
+  String get volume;
+
+  /// No description provided for @volumeUnit.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit'**
+  String get volumeUnit;
+
+  /// No description provided for @shopMemo.
+  ///
+  /// In en, this message translates to:
+  /// **'Memo'**
+  String get shopMemo;
+
+  /// No description provided for @shopEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'Events'**
+  String get shopEvents;
+
+  /// No description provided for @addEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Event'**
+  String get addEvent;
+
+  /// No description provided for @editEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Event'**
+  String get editEvent;
+
+  /// No description provided for @recurring.
+  ///
+  /// In en, this message translates to:
+  /// **'Recurring'**
+  String get recurring;
+
+  /// No description provided for @oneTime.
+  ///
+  /// In en, this message translates to:
+  /// **'One-time'**
+  String get oneTime;
+
+  /// No description provided for @dayOfWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of Week'**
+  String get dayOfWeek;
+
+  /// No description provided for @dayOfMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Day of Month'**
+  String get dayOfMonth;
+
+  /// No description provided for @priceCalculator.
+  ///
+  /// In en, this message translates to:
+  /// **'Price Calculator'**
+  String get priceCalculator;
+
+  /// No description provided for @calculatePrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Calculate'**
+  String get calculatePrice;
+
+  /// No description provided for @viewHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'View History'**
+  String get viewHistory;
+
+  /// No description provided for @selectImageSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Image Source'**
+  String get selectImageSource;
+
+  /// No description provided for @camera.
+  ///
+  /// In en, this message translates to:
+  /// **'Camera'**
+  String get camera;
+
+  /// No description provided for @gallery.
+  ///
+  /// In en, this message translates to:
+  /// **'Gallery'**
+  String get gallery;
+
+  /// No description provided for @eventTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Event Title'**
+  String get eventTitle;
+
+  /// No description provided for @eventDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'Description'**
+  String get eventDescription;
+
+  /// No description provided for @unitPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'Unit Price'**
+  String get unitPrice;
+
+  /// No description provided for @monday.
+  ///
+  /// In en, this message translates to:
+  /// **'Monday'**
+  String get monday;
+
+  /// No description provided for @tuesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Tuesday'**
+  String get tuesday;
+
+  /// No description provided for @wednesday.
+  ///
+  /// In en, this message translates to:
+  /// **'Wednesday'**
+  String get wednesday;
+
+  /// No description provided for @thursday.
+  ///
+  /// In en, this message translates to:
+  /// **'Thursday'**
+  String get thursday;
+
+  /// No description provided for @friday.
+  ///
+  /// In en, this message translates to:
+  /// **'Friday'**
+  String get friday;
+
+  /// No description provided for @saturday.
+  ///
+  /// In en, this message translates to:
+  /// **'Saturday'**
+  String get saturday;
+
+  /// No description provided for @sunday.
+  ///
+  /// In en, this message translates to:
+  /// **'Sunday'**
+  String get sunday;
+
+  /// No description provided for @shopDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Shop Detail'**
+  String get shopDetail;
+
+  /// No description provided for @editShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Shop'**
+  String get editShop;
+
+  /// No description provided for @deleteShop.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Shop'**
+  String get deleteShop;
+
+  /// No description provided for @deleteEvent.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Event'**
+  String get deleteEvent;
+
+  /// No description provided for @noEvents.
+  ///
+  /// In en, this message translates to:
+  /// **'No events yet.'**
+  String get noEvents;
+
+  /// No description provided for @volumeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{volume} {unit}'**
+  String volumeLabel(String volume, String unit);
+
+  /// No description provided for @calculatedPrice.
+  ///
+  /// In en, this message translates to:
+  /// **'≈ ¥{price}'**
+  String calculatedPrice(String price);
+
+  /// No description provided for @inputQuantity.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter quantity'**
+  String get inputQuantity;
+
+  /// No description provided for @gram.
+  ///
+  /// In en, this message translates to:
+  /// **'g'**
+  String get gram;
+
+  /// No description provided for @milliliter.
+  ///
+  /// In en, this message translates to:
+  /// **'ml'**
+  String get milliliter;
+
+  /// No description provided for @liter.
+  ///
+  /// In en, this message translates to:
+  /// **'L'**
+  String get liter;
+
+  /// No description provided for @piece.
+  ///
+  /// In en, this message translates to:
+  /// **'pcs'**
+  String get piece;
+
+  /// No description provided for @kilogram.
+  ///
+  /// In en, this message translates to:
+  /// **'kg'**
+  String get kilogram;
+
+  /// No description provided for @deleteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get deleteConfirm;
+
+  /// No description provided for @editProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Product'**
+  String get editProduct;
+
+  /// No description provided for @categoryManagement.
+  ///
+  /// In en, this message translates to:
+  /// **'Category Management'**
+  String get categoryManagement;
+
+  /// No description provided for @noShopsFound.
+  ///
+  /// In en, this message translates to:
+  /// **'No shops yet.'**
+  String get noShopsFound;
+
+  /// No description provided for @at.
+  ///
+  /// In en, this message translates to:
+  /// **'at'**
+  String get at;
 }
 
 class _AppLocalizationsDelegate

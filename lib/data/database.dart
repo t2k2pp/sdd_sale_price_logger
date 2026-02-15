@@ -17,6 +17,7 @@ class Categories extends Table {
 class Shops extends Table {
   IntColumn get id => integer().autoIncrement()();
   TextColumn get name => text()();
+  TextColumn get memo => text().nullable()();
 }
 
 class Products extends Table {
@@ -25,6 +26,8 @@ class Products extends Table {
   IntColumn get categoryId => integer().references(Categories, #id)();
   TextColumn get imagePath => text().nullable()();
   TextColumn get emoji => text().nullable()();
+  RealColumn get volume => real().nullable()();
+  TextColumn get volumeUnit => text().nullable()();
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
@@ -39,12 +42,28 @@ class Prices extends Table {
   DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
 }
 
-@DriftDatabase(tables: [Categories, Shops, Products, Prices])
+class ShopEvents extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get shopId => integer().references(Shops, #id)();
+  TextColumn get title => text()();
+  TextColumn get description => text().nullable()();
+  // 'recurring' or 'oneTime'
+  TextColumn get eventType => text().withDefault(const Constant('recurring'))();
+  // For recurring: day of week (1=Monday, 7=Sunday), nullable
+  IntColumn get dayOfWeek => integer().nullable()();
+  // For recurring: day of month (1-31), nullable
+  IntColumn get dayOfMonth => integer().nullable()();
+  // For one-time events: specific date
+  DateTimeColumn get date => dateTime().nullable()();
+  DateTimeColumn get createdAt => dateTime().withDefault(currentDateAndTime)();
+}
+
+@DriftDatabase(tables: [Categories, Shops, Products, Prices, ShopEvents])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration {
@@ -59,6 +78,12 @@ class AppDatabase extends _$AppDatabase {
         }
         if (from < 4) {
           await m.addColumn(products, products.emoji);
+        }
+        if (from < 5) {
+          await m.addColumn(shops, shops.memo);
+          await m.addColumn(products, products.volume);
+          await m.addColumn(products, products.volumeUnit);
+          await m.createTable(shopEvents);
         }
       },
     );

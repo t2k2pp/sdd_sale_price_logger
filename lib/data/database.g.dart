@@ -272,8 +272,17 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
     type: DriftSqlType.string,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _memoMeta = const VerificationMeta('memo');
   @override
-  List<GeneratedColumn> get $columns => [id, name];
+  late final GeneratedColumn<String> memo = GeneratedColumn<String>(
+    'memo',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [id, name, memo];
   @override
   String get aliasedName => _alias ?? actualTableName;
   @override
@@ -297,6 +306,12 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
     } else if (isInserting) {
       context.missing(_nameMeta);
     }
+    if (data.containsKey('memo')) {
+      context.handle(
+        _memoMeta,
+        memo.isAcceptableOrUnknown(data['memo']!, _memoMeta),
+      );
+    }
     return context;
   }
 
@@ -314,6 +329,10 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
         DriftSqlType.string,
         data['${effectivePrefix}name'],
       )!,
+      memo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}memo'],
+      ),
     );
   }
 
@@ -326,17 +345,25 @@ class $ShopsTable extends Shops with TableInfo<$ShopsTable, Shop> {
 class Shop extends DataClass implements Insertable<Shop> {
   final int id;
   final String name;
-  const Shop({required this.id, required this.name});
+  final String? memo;
+  const Shop({required this.id, required this.name, this.memo});
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
     final map = <String, Expression>{};
     map['id'] = Variable<int>(id);
     map['name'] = Variable<String>(name);
+    if (!nullToAbsent || memo != null) {
+      map['memo'] = Variable<String>(memo);
+    }
     return map;
   }
 
   ShopsCompanion toCompanion(bool nullToAbsent) {
-    return ShopsCompanion(id: Value(id), name: Value(name));
+    return ShopsCompanion(
+      id: Value(id),
+      name: Value(name),
+      memo: memo == null && nullToAbsent ? const Value.absent() : Value(memo),
+    );
   }
 
   factory Shop.fromJson(
@@ -347,6 +374,7 @@ class Shop extends DataClass implements Insertable<Shop> {
     return Shop(
       id: serializer.fromJson<int>(json['id']),
       name: serializer.fromJson<String>(json['name']),
+      memo: serializer.fromJson<String?>(json['memo']),
     );
   }
   @override
@@ -355,15 +383,24 @@ class Shop extends DataClass implements Insertable<Shop> {
     return <String, dynamic>{
       'id': serializer.toJson<int>(id),
       'name': serializer.toJson<String>(name),
+      'memo': serializer.toJson<String?>(memo),
     };
   }
 
-  Shop copyWith({int? id, String? name}) =>
-      Shop(id: id ?? this.id, name: name ?? this.name);
+  Shop copyWith({
+    int? id,
+    String? name,
+    Value<String?> memo = const Value.absent(),
+  }) => Shop(
+    id: id ?? this.id,
+    name: name ?? this.name,
+    memo: memo.present ? memo.value : this.memo,
+  );
   Shop copyWithCompanion(ShopsCompanion data) {
     return Shop(
       id: data.id.present ? data.id.value : this.id,
       name: data.name.present ? data.name.value : this.name,
+      memo: data.memo.present ? data.memo.value : this.memo,
     );
   }
 
@@ -371,40 +408,59 @@ class Shop extends DataClass implements Insertable<Shop> {
   String toString() {
     return (StringBuffer('Shop(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('memo: $memo')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode => Object.hash(id, name);
+  int get hashCode => Object.hash(id, name, memo);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is Shop && other.id == this.id && other.name == this.name);
+      (other is Shop &&
+          other.id == this.id &&
+          other.name == this.name &&
+          other.memo == this.memo);
 }
 
 class ShopsCompanion extends UpdateCompanion<Shop> {
   final Value<int> id;
   final Value<String> name;
+  final Value<String?> memo;
   const ShopsCompanion({
     this.id = const Value.absent(),
     this.name = const Value.absent(),
+    this.memo = const Value.absent(),
   });
-  ShopsCompanion.insert({this.id = const Value.absent(), required String name})
-    : name = Value(name);
+  ShopsCompanion.insert({
+    this.id = const Value.absent(),
+    required String name,
+    this.memo = const Value.absent(),
+  }) : name = Value(name);
   static Insertable<Shop> custom({
     Expression<int>? id,
     Expression<String>? name,
+    Expression<String>? memo,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
       if (name != null) 'name': name,
+      if (memo != null) 'memo': memo,
     });
   }
 
-  ShopsCompanion copyWith({Value<int>? id, Value<String>? name}) {
-    return ShopsCompanion(id: id ?? this.id, name: name ?? this.name);
+  ShopsCompanion copyWith({
+    Value<int>? id,
+    Value<String>? name,
+    Value<String?>? memo,
+  }) {
+    return ShopsCompanion(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      memo: memo ?? this.memo,
+    );
   }
 
   @override
@@ -416,6 +472,9 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
     if (name.present) {
       map['name'] = Variable<String>(name.value);
     }
+    if (memo.present) {
+      map['memo'] = Variable<String>(memo.value);
+    }
     return map;
   }
 
@@ -423,7 +482,8 @@ class ShopsCompanion extends UpdateCompanion<Shop> {
   String toString() {
     return (StringBuffer('ShopsCompanion(')
           ..write('id: $id, ')
-          ..write('name: $name')
+          ..write('name: $name, ')
+          ..write('memo: $memo')
           ..write(')'))
         .toString();
   }
@@ -490,6 +550,26 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _volumeMeta = const VerificationMeta('volume');
+  @override
+  late final GeneratedColumn<double> volume = GeneratedColumn<double>(
+    'volume',
+    aliasedName,
+    true,
+    type: DriftSqlType.double,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _volumeUnitMeta = const VerificationMeta(
+    'volumeUnit',
+  );
+  @override
+  late final GeneratedColumn<String> volumeUnit = GeneratedColumn<String>(
+    'volume_unit',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtMeta = const VerificationMeta(
     'createdAt',
   );
@@ -509,6 +589,8 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
     categoryId,
     imagePath,
     emoji,
+    volume,
+    volumeUnit,
     createdAt,
   ];
   @override
@@ -554,6 +636,18 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         emoji.isAcceptableOrUnknown(data['emoji']!, _emojiMeta),
       );
     }
+    if (data.containsKey('volume')) {
+      context.handle(
+        _volumeMeta,
+        volume.isAcceptableOrUnknown(data['volume']!, _volumeMeta),
+      );
+    }
+    if (data.containsKey('volume_unit')) {
+      context.handle(
+        _volumeUnitMeta,
+        volumeUnit.isAcceptableOrUnknown(data['volume_unit']!, _volumeUnitMeta),
+      );
+    }
     if (data.containsKey('created_at')) {
       context.handle(
         _createdAtMeta,
@@ -589,6 +683,14 @@ class $ProductsTable extends Products with TableInfo<$ProductsTable, Product> {
         DriftSqlType.string,
         data['${effectivePrefix}emoji'],
       ),
+      volume: attachedDatabase.typeMapping.read(
+        DriftSqlType.double,
+        data['${effectivePrefix}volume'],
+      ),
+      volumeUnit: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}volume_unit'],
+      ),
       createdAt: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
@@ -608,6 +710,8 @@ class Product extends DataClass implements Insertable<Product> {
   final int categoryId;
   final String? imagePath;
   final String? emoji;
+  final double? volume;
+  final String? volumeUnit;
   final DateTime createdAt;
   const Product({
     required this.id,
@@ -615,6 +719,8 @@ class Product extends DataClass implements Insertable<Product> {
     required this.categoryId,
     this.imagePath,
     this.emoji,
+    this.volume,
+    this.volumeUnit,
     required this.createdAt,
   });
   @override
@@ -628,6 +734,12 @@ class Product extends DataClass implements Insertable<Product> {
     }
     if (!nullToAbsent || emoji != null) {
       map['emoji'] = Variable<String>(emoji);
+    }
+    if (!nullToAbsent || volume != null) {
+      map['volume'] = Variable<double>(volume);
+    }
+    if (!nullToAbsent || volumeUnit != null) {
+      map['volume_unit'] = Variable<String>(volumeUnit);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
     return map;
@@ -644,6 +756,12 @@ class Product extends DataClass implements Insertable<Product> {
       emoji: emoji == null && nullToAbsent
           ? const Value.absent()
           : Value(emoji),
+      volume: volume == null && nullToAbsent
+          ? const Value.absent()
+          : Value(volume),
+      volumeUnit: volumeUnit == null && nullToAbsent
+          ? const Value.absent()
+          : Value(volumeUnit),
       createdAt: Value(createdAt),
     );
   }
@@ -659,6 +777,8 @@ class Product extends DataClass implements Insertable<Product> {
       categoryId: serializer.fromJson<int>(json['categoryId']),
       imagePath: serializer.fromJson<String?>(json['imagePath']),
       emoji: serializer.fromJson<String?>(json['emoji']),
+      volume: serializer.fromJson<double?>(json['volume']),
+      volumeUnit: serializer.fromJson<String?>(json['volumeUnit']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
     );
   }
@@ -671,6 +791,8 @@ class Product extends DataClass implements Insertable<Product> {
       'categoryId': serializer.toJson<int>(categoryId),
       'imagePath': serializer.toJson<String?>(imagePath),
       'emoji': serializer.toJson<String?>(emoji),
+      'volume': serializer.toJson<double?>(volume),
+      'volumeUnit': serializer.toJson<String?>(volumeUnit),
       'createdAt': serializer.toJson<DateTime>(createdAt),
     };
   }
@@ -681,6 +803,8 @@ class Product extends DataClass implements Insertable<Product> {
     int? categoryId,
     Value<String?> imagePath = const Value.absent(),
     Value<String?> emoji = const Value.absent(),
+    Value<double?> volume = const Value.absent(),
+    Value<String?> volumeUnit = const Value.absent(),
     DateTime? createdAt,
   }) => Product(
     id: id ?? this.id,
@@ -688,6 +812,8 @@ class Product extends DataClass implements Insertable<Product> {
     categoryId: categoryId ?? this.categoryId,
     imagePath: imagePath.present ? imagePath.value : this.imagePath,
     emoji: emoji.present ? emoji.value : this.emoji,
+    volume: volume.present ? volume.value : this.volume,
+    volumeUnit: volumeUnit.present ? volumeUnit.value : this.volumeUnit,
     createdAt: createdAt ?? this.createdAt,
   );
   Product copyWithCompanion(ProductsCompanion data) {
@@ -699,6 +825,10 @@ class Product extends DataClass implements Insertable<Product> {
           : this.categoryId,
       imagePath: data.imagePath.present ? data.imagePath.value : this.imagePath,
       emoji: data.emoji.present ? data.emoji.value : this.emoji,
+      volume: data.volume.present ? data.volume.value : this.volume,
+      volumeUnit: data.volumeUnit.present
+          ? data.volumeUnit.value
+          : this.volumeUnit,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
     );
   }
@@ -711,14 +841,24 @@ class Product extends DataClass implements Insertable<Product> {
           ..write('categoryId: $categoryId, ')
           ..write('imagePath: $imagePath, ')
           ..write('emoji: $emoji, ')
+          ..write('volume: $volume, ')
+          ..write('volumeUnit: $volumeUnit, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
   }
 
   @override
-  int get hashCode =>
-      Object.hash(id, name, categoryId, imagePath, emoji, createdAt);
+  int get hashCode => Object.hash(
+    id,
+    name,
+    categoryId,
+    imagePath,
+    emoji,
+    volume,
+    volumeUnit,
+    createdAt,
+  );
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -728,6 +868,8 @@ class Product extends DataClass implements Insertable<Product> {
           other.categoryId == this.categoryId &&
           other.imagePath == this.imagePath &&
           other.emoji == this.emoji &&
+          other.volume == this.volume &&
+          other.volumeUnit == this.volumeUnit &&
           other.createdAt == this.createdAt);
 }
 
@@ -737,6 +879,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
   final Value<int> categoryId;
   final Value<String?> imagePath;
   final Value<String?> emoji;
+  final Value<double?> volume;
+  final Value<String?> volumeUnit;
   final Value<DateTime> createdAt;
   const ProductsCompanion({
     this.id = const Value.absent(),
@@ -744,6 +888,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     this.categoryId = const Value.absent(),
     this.imagePath = const Value.absent(),
     this.emoji = const Value.absent(),
+    this.volume = const Value.absent(),
+    this.volumeUnit = const Value.absent(),
     this.createdAt = const Value.absent(),
   });
   ProductsCompanion.insert({
@@ -752,6 +898,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     required int categoryId,
     this.imagePath = const Value.absent(),
     this.emoji = const Value.absent(),
+    this.volume = const Value.absent(),
+    this.volumeUnit = const Value.absent(),
     this.createdAt = const Value.absent(),
   }) : name = Value(name),
        categoryId = Value(categoryId);
@@ -761,6 +909,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Expression<int>? categoryId,
     Expression<String>? imagePath,
     Expression<String>? emoji,
+    Expression<double>? volume,
+    Expression<String>? volumeUnit,
     Expression<DateTime>? createdAt,
   }) {
     return RawValuesInsertable({
@@ -769,6 +919,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       if (categoryId != null) 'category_id': categoryId,
       if (imagePath != null) 'image_path': imagePath,
       if (emoji != null) 'emoji': emoji,
+      if (volume != null) 'volume': volume,
+      if (volumeUnit != null) 'volume_unit': volumeUnit,
       if (createdAt != null) 'created_at': createdAt,
     });
   }
@@ -779,6 +931,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     Value<int>? categoryId,
     Value<String?>? imagePath,
     Value<String?>? emoji,
+    Value<double?>? volume,
+    Value<String?>? volumeUnit,
     Value<DateTime>? createdAt,
   }) {
     return ProductsCompanion(
@@ -787,6 +941,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
       categoryId: categoryId ?? this.categoryId,
       imagePath: imagePath ?? this.imagePath,
       emoji: emoji ?? this.emoji,
+      volume: volume ?? this.volume,
+      volumeUnit: volumeUnit ?? this.volumeUnit,
       createdAt: createdAt ?? this.createdAt,
     );
   }
@@ -809,6 +965,12 @@ class ProductsCompanion extends UpdateCompanion<Product> {
     if (emoji.present) {
       map['emoji'] = Variable<String>(emoji.value);
     }
+    if (volume.present) {
+      map['volume'] = Variable<double>(volume.value);
+    }
+    if (volumeUnit.present) {
+      map['volume_unit'] = Variable<String>(volumeUnit.value);
+    }
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
@@ -823,6 +985,8 @@ class ProductsCompanion extends UpdateCompanion<Product> {
           ..write('categoryId: $categoryId, ')
           ..write('imagePath: $imagePath, ')
           ..write('emoji: $emoji, ')
+          ..write('volume: $volume, ')
+          ..write('volumeUnit: $volumeUnit, ')
           ..write('createdAt: $createdAt')
           ..write(')'))
         .toString();
@@ -1279,6 +1443,561 @@ class PricesCompanion extends UpdateCompanion<Price> {
   }
 }
 
+class $ShopEventsTable extends ShopEvents
+    with TableInfo<$ShopEventsTable, ShopEvent> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $ShopEventsTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _idMeta = const VerificationMeta('id');
+  @override
+  late final GeneratedColumn<int> id = GeneratedColumn<int>(
+    'id',
+    aliasedName,
+    false,
+    hasAutoIncrement: true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'PRIMARY KEY AUTOINCREMENT',
+    ),
+  );
+  static const VerificationMeta _shopIdMeta = const VerificationMeta('shopId');
+  @override
+  late final GeneratedColumn<int> shopId = GeneratedColumn<int>(
+    'shop_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: true,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'REFERENCES shops (id)',
+    ),
+  );
+  static const VerificationMeta _titleMeta = const VerificationMeta('title');
+  @override
+  late final GeneratedColumn<String> title = GeneratedColumn<String>(
+    'title',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _descriptionMeta = const VerificationMeta(
+    'description',
+  );
+  @override
+  late final GeneratedColumn<String> description = GeneratedColumn<String>(
+    'description',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _eventTypeMeta = const VerificationMeta(
+    'eventType',
+  );
+  @override
+  late final GeneratedColumn<String> eventType = GeneratedColumn<String>(
+    'event_type',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('recurring'),
+  );
+  static const VerificationMeta _dayOfWeekMeta = const VerificationMeta(
+    'dayOfWeek',
+  );
+  @override
+  late final GeneratedColumn<int> dayOfWeek = GeneratedColumn<int>(
+    'day_of_week',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dayOfMonthMeta = const VerificationMeta(
+    'dayOfMonth',
+  );
+  @override
+  late final GeneratedColumn<int> dayOfMonth = GeneratedColumn<int>(
+    'day_of_month',
+    aliasedName,
+    true,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _dateMeta = const VerificationMeta('date');
+  @override
+  late final GeneratedColumn<DateTime> date = GeneratedColumn<DateTime>(
+    'date',
+    aliasedName,
+    true,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _createdAtMeta = const VerificationMeta(
+    'createdAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAt = GeneratedColumn<DateTime>(
+    'created_at',
+    aliasedName,
+    false,
+    type: DriftSqlType.dateTime,
+    requiredDuringInsert: false,
+    defaultValue: currentDateAndTime,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    id,
+    shopId,
+    title,
+    description,
+    eventType,
+    dayOfWeek,
+    dayOfMonth,
+    date,
+    createdAt,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'shop_events';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<ShopEvent> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('id')) {
+      context.handle(_idMeta, id.isAcceptableOrUnknown(data['id']!, _idMeta));
+    }
+    if (data.containsKey('shop_id')) {
+      context.handle(
+        _shopIdMeta,
+        shopId.isAcceptableOrUnknown(data['shop_id']!, _shopIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_shopIdMeta);
+    }
+    if (data.containsKey('title')) {
+      context.handle(
+        _titleMeta,
+        title.isAcceptableOrUnknown(data['title']!, _titleMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_titleMeta);
+    }
+    if (data.containsKey('description')) {
+      context.handle(
+        _descriptionMeta,
+        description.isAcceptableOrUnknown(
+          data['description']!,
+          _descriptionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('event_type')) {
+      context.handle(
+        _eventTypeMeta,
+        eventType.isAcceptableOrUnknown(data['event_type']!, _eventTypeMeta),
+      );
+    }
+    if (data.containsKey('day_of_week')) {
+      context.handle(
+        _dayOfWeekMeta,
+        dayOfWeek.isAcceptableOrUnknown(data['day_of_week']!, _dayOfWeekMeta),
+      );
+    }
+    if (data.containsKey('day_of_month')) {
+      context.handle(
+        _dayOfMonthMeta,
+        dayOfMonth.isAcceptableOrUnknown(
+          data['day_of_month']!,
+          _dayOfMonthMeta,
+        ),
+      );
+    }
+    if (data.containsKey('date')) {
+      context.handle(
+        _dateMeta,
+        date.isAcceptableOrUnknown(data['date']!, _dateMeta),
+      );
+    }
+    if (data.containsKey('created_at')) {
+      context.handle(
+        _createdAtMeta,
+        createdAt.isAcceptableOrUnknown(data['created_at']!, _createdAtMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {id};
+  @override
+  ShopEvent map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return ShopEvent(
+      id: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}id'],
+      )!,
+      shopId: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}shop_id'],
+      )!,
+      title: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}title'],
+      )!,
+      description: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}description'],
+      ),
+      eventType: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}event_type'],
+      )!,
+      dayOfWeek: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_of_week'],
+      ),
+      dayOfMonth: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}day_of_month'],
+      ),
+      date: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}date'],
+      ),
+      createdAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at'],
+      )!,
+    );
+  }
+
+  @override
+  $ShopEventsTable createAlias(String alias) {
+    return $ShopEventsTable(attachedDatabase, alias);
+  }
+}
+
+class ShopEvent extends DataClass implements Insertable<ShopEvent> {
+  final int id;
+  final int shopId;
+  final String title;
+  final String? description;
+  final String eventType;
+  final int? dayOfWeek;
+  final int? dayOfMonth;
+  final DateTime? date;
+  final DateTime createdAt;
+  const ShopEvent({
+    required this.id,
+    required this.shopId,
+    required this.title,
+    this.description,
+    required this.eventType,
+    this.dayOfWeek,
+    this.dayOfMonth,
+    this.date,
+    required this.createdAt,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['id'] = Variable<int>(id);
+    map['shop_id'] = Variable<int>(shopId);
+    map['title'] = Variable<String>(title);
+    if (!nullToAbsent || description != null) {
+      map['description'] = Variable<String>(description);
+    }
+    map['event_type'] = Variable<String>(eventType);
+    if (!nullToAbsent || dayOfWeek != null) {
+      map['day_of_week'] = Variable<int>(dayOfWeek);
+    }
+    if (!nullToAbsent || dayOfMonth != null) {
+      map['day_of_month'] = Variable<int>(dayOfMonth);
+    }
+    if (!nullToAbsent || date != null) {
+      map['date'] = Variable<DateTime>(date);
+    }
+    map['created_at'] = Variable<DateTime>(createdAt);
+    return map;
+  }
+
+  ShopEventsCompanion toCompanion(bool nullToAbsent) {
+    return ShopEventsCompanion(
+      id: Value(id),
+      shopId: Value(shopId),
+      title: Value(title),
+      description: description == null && nullToAbsent
+          ? const Value.absent()
+          : Value(description),
+      eventType: Value(eventType),
+      dayOfWeek: dayOfWeek == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dayOfWeek),
+      dayOfMonth: dayOfMonth == null && nullToAbsent
+          ? const Value.absent()
+          : Value(dayOfMonth),
+      date: date == null && nullToAbsent ? const Value.absent() : Value(date),
+      createdAt: Value(createdAt),
+    );
+  }
+
+  factory ShopEvent.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return ShopEvent(
+      id: serializer.fromJson<int>(json['id']),
+      shopId: serializer.fromJson<int>(json['shopId']),
+      title: serializer.fromJson<String>(json['title']),
+      description: serializer.fromJson<String?>(json['description']),
+      eventType: serializer.fromJson<String>(json['eventType']),
+      dayOfWeek: serializer.fromJson<int?>(json['dayOfWeek']),
+      dayOfMonth: serializer.fromJson<int?>(json['dayOfMonth']),
+      date: serializer.fromJson<DateTime?>(json['date']),
+      createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'id': serializer.toJson<int>(id),
+      'shopId': serializer.toJson<int>(shopId),
+      'title': serializer.toJson<String>(title),
+      'description': serializer.toJson<String?>(description),
+      'eventType': serializer.toJson<String>(eventType),
+      'dayOfWeek': serializer.toJson<int?>(dayOfWeek),
+      'dayOfMonth': serializer.toJson<int?>(dayOfMonth),
+      'date': serializer.toJson<DateTime?>(date),
+      'createdAt': serializer.toJson<DateTime>(createdAt),
+    };
+  }
+
+  ShopEvent copyWith({
+    int? id,
+    int? shopId,
+    String? title,
+    Value<String?> description = const Value.absent(),
+    String? eventType,
+    Value<int?> dayOfWeek = const Value.absent(),
+    Value<int?> dayOfMonth = const Value.absent(),
+    Value<DateTime?> date = const Value.absent(),
+    DateTime? createdAt,
+  }) => ShopEvent(
+    id: id ?? this.id,
+    shopId: shopId ?? this.shopId,
+    title: title ?? this.title,
+    description: description.present ? description.value : this.description,
+    eventType: eventType ?? this.eventType,
+    dayOfWeek: dayOfWeek.present ? dayOfWeek.value : this.dayOfWeek,
+    dayOfMonth: dayOfMonth.present ? dayOfMonth.value : this.dayOfMonth,
+    date: date.present ? date.value : this.date,
+    createdAt: createdAt ?? this.createdAt,
+  );
+  ShopEvent copyWithCompanion(ShopEventsCompanion data) {
+    return ShopEvent(
+      id: data.id.present ? data.id.value : this.id,
+      shopId: data.shopId.present ? data.shopId.value : this.shopId,
+      title: data.title.present ? data.title.value : this.title,
+      description: data.description.present
+          ? data.description.value
+          : this.description,
+      eventType: data.eventType.present ? data.eventType.value : this.eventType,
+      dayOfWeek: data.dayOfWeek.present ? data.dayOfWeek.value : this.dayOfWeek,
+      dayOfMonth: data.dayOfMonth.present
+          ? data.dayOfMonth.value
+          : this.dayOfMonth,
+      date: data.date.present ? data.date.value : this.date,
+      createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopEvent(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('eventType: $eventType, ')
+          ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('dayOfMonth: $dayOfMonth, ')
+          ..write('date: $date, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    id,
+    shopId,
+    title,
+    description,
+    eventType,
+    dayOfWeek,
+    dayOfMonth,
+    date,
+    createdAt,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is ShopEvent &&
+          other.id == this.id &&
+          other.shopId == this.shopId &&
+          other.title == this.title &&
+          other.description == this.description &&
+          other.eventType == this.eventType &&
+          other.dayOfWeek == this.dayOfWeek &&
+          other.dayOfMonth == this.dayOfMonth &&
+          other.date == this.date &&
+          other.createdAt == this.createdAt);
+}
+
+class ShopEventsCompanion extends UpdateCompanion<ShopEvent> {
+  final Value<int> id;
+  final Value<int> shopId;
+  final Value<String> title;
+  final Value<String?> description;
+  final Value<String> eventType;
+  final Value<int?> dayOfWeek;
+  final Value<int?> dayOfMonth;
+  final Value<DateTime?> date;
+  final Value<DateTime> createdAt;
+  const ShopEventsCompanion({
+    this.id = const Value.absent(),
+    this.shopId = const Value.absent(),
+    this.title = const Value.absent(),
+    this.description = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.dayOfWeek = const Value.absent(),
+    this.dayOfMonth = const Value.absent(),
+    this.date = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  });
+  ShopEventsCompanion.insert({
+    this.id = const Value.absent(),
+    required int shopId,
+    required String title,
+    this.description = const Value.absent(),
+    this.eventType = const Value.absent(),
+    this.dayOfWeek = const Value.absent(),
+    this.dayOfMonth = const Value.absent(),
+    this.date = const Value.absent(),
+    this.createdAt = const Value.absent(),
+  }) : shopId = Value(shopId),
+       title = Value(title);
+  static Insertable<ShopEvent> custom({
+    Expression<int>? id,
+    Expression<int>? shopId,
+    Expression<String>? title,
+    Expression<String>? description,
+    Expression<String>? eventType,
+    Expression<int>? dayOfWeek,
+    Expression<int>? dayOfMonth,
+    Expression<DateTime>? date,
+    Expression<DateTime>? createdAt,
+  }) {
+    return RawValuesInsertable({
+      if (id != null) 'id': id,
+      if (shopId != null) 'shop_id': shopId,
+      if (title != null) 'title': title,
+      if (description != null) 'description': description,
+      if (eventType != null) 'event_type': eventType,
+      if (dayOfWeek != null) 'day_of_week': dayOfWeek,
+      if (dayOfMonth != null) 'day_of_month': dayOfMonth,
+      if (date != null) 'date': date,
+      if (createdAt != null) 'created_at': createdAt,
+    });
+  }
+
+  ShopEventsCompanion copyWith({
+    Value<int>? id,
+    Value<int>? shopId,
+    Value<String>? title,
+    Value<String?>? description,
+    Value<String>? eventType,
+    Value<int?>? dayOfWeek,
+    Value<int?>? dayOfMonth,
+    Value<DateTime?>? date,
+    Value<DateTime>? createdAt,
+  }) {
+    return ShopEventsCompanion(
+      id: id ?? this.id,
+      shopId: shopId ?? this.shopId,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      eventType: eventType ?? this.eventType,
+      dayOfWeek: dayOfWeek ?? this.dayOfWeek,
+      dayOfMonth: dayOfMonth ?? this.dayOfMonth,
+      date: date ?? this.date,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (id.present) {
+      map['id'] = Variable<int>(id.value);
+    }
+    if (shopId.present) {
+      map['shop_id'] = Variable<int>(shopId.value);
+    }
+    if (title.present) {
+      map['title'] = Variable<String>(title.value);
+    }
+    if (description.present) {
+      map['description'] = Variable<String>(description.value);
+    }
+    if (eventType.present) {
+      map['event_type'] = Variable<String>(eventType.value);
+    }
+    if (dayOfWeek.present) {
+      map['day_of_week'] = Variable<int>(dayOfWeek.value);
+    }
+    if (dayOfMonth.present) {
+      map['day_of_month'] = Variable<int>(dayOfMonth.value);
+    }
+    if (date.present) {
+      map['date'] = Variable<DateTime>(date.value);
+    }
+    if (createdAt.present) {
+      map['created_at'] = Variable<DateTime>(createdAt.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('ShopEventsCompanion(')
+          ..write('id: $id, ')
+          ..write('shopId: $shopId, ')
+          ..write('title: $title, ')
+          ..write('description: $description, ')
+          ..write('eventType: $eventType, ')
+          ..write('dayOfWeek: $dayOfWeek, ')
+          ..write('dayOfMonth: $dayOfMonth, ')
+          ..write('date: $date, ')
+          ..write('createdAt: $createdAt')
+          ..write(')'))
+        .toString();
+  }
+}
+
 abstract class _$AppDatabase extends GeneratedDatabase {
   _$AppDatabase(QueryExecutor e) : super(e);
   $AppDatabaseManager get managers => $AppDatabaseManager(this);
@@ -1286,6 +2005,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $ShopsTable shops = $ShopsTable(this);
   late final $ProductsTable products = $ProductsTable(this);
   late final $PricesTable prices = $PricesTable(this);
+  late final $ShopEventsTable shopEvents = $ShopEventsTable(this);
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1295,6 +2015,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
     shops,
     products,
     prices,
+    shopEvents,
   ];
 }
 
@@ -1553,9 +2274,17 @@ typedef $$CategoriesTableProcessedTableManager =
       PrefetchHooks Function({bool productsRefs})
     >;
 typedef $$ShopsTableCreateCompanionBuilder =
-    ShopsCompanion Function({Value<int> id, required String name});
+    ShopsCompanion Function({
+      Value<int> id,
+      required String name,
+      Value<String?> memo,
+    });
 typedef $$ShopsTableUpdateCompanionBuilder =
-    ShopsCompanion Function({Value<int> id, Value<String> name});
+    ShopsCompanion Function({
+      Value<int> id,
+      Value<String> name,
+      Value<String?> memo,
+    });
 
 final class $$ShopsTableReferences
     extends BaseReferences<_$AppDatabase, $ShopsTable, Shop> {
@@ -1575,6 +2304,24 @@ final class $$ShopsTableReferences
     ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
 
     final cache = $_typedResult.readTableOrNull(_pricesRefsTable($_db));
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: cache),
+    );
+  }
+
+  static MultiTypedResultKey<$ShopEventsTable, List<ShopEvent>>
+  _shopEventsRefsTable(_$AppDatabase db) => MultiTypedResultKey.fromTable(
+    db.shopEvents,
+    aliasName: $_aliasNameGenerator(db.shops.id, db.shopEvents.shopId),
+  );
+
+  $$ShopEventsTableProcessedTableManager get shopEventsRefs {
+    final manager = $$ShopEventsTableTableManager(
+      $_db,
+      $_db.shopEvents,
+    ).filter((f) => f.shopId.id.sqlEquals($_itemColumn<int>('id')!));
+
+    final cache = $_typedResult.readTableOrNull(_shopEventsRefsTable($_db));
     return ProcessedTableManager(
       manager.$state.copyWith(prefetchedData: cache),
     );
@@ -1599,6 +2346,11 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get memo => $composableBuilder(
+    column: $table.memo,
+    builder: (column) => ColumnFilters(column),
+  );
+
   Expression<bool> pricesRefs(
     Expression<bool> Function($$PricesTableFilterComposer f) f,
   ) {
@@ -1615,6 +2367,31 @@ class $$ShopsTableFilterComposer extends Composer<_$AppDatabase, $ShopsTable> {
           }) => $$PricesTableFilterComposer(
             $db: $db,
             $table: $db.prices,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
+
+  Expression<bool> shopEventsRefs(
+    Expression<bool> Function($$ShopEventsTableFilterComposer f) f,
+  ) {
+    final $$ShopEventsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shopEvents,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopEventsTableFilterComposer(
+            $db: $db,
+            $table: $db.shopEvents,
             $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
             joinBuilder: joinBuilder,
             $removeJoinBuilderFromRootComposer:
@@ -1643,6 +2420,11 @@ class $$ShopsTableOrderingComposer
     column: $table.name,
     builder: (column) => ColumnOrderings(column),
   );
+
+  ColumnOrderings<String> get memo => $composableBuilder(
+    column: $table.memo,
+    builder: (column) => ColumnOrderings(column),
+  );
 }
 
 class $$ShopsTableAnnotationComposer
@@ -1659,6 +2441,9 @@ class $$ShopsTableAnnotationComposer
 
   GeneratedColumn<String> get name =>
       $composableBuilder(column: $table.name, builder: (column) => column);
+
+  GeneratedColumn<String> get memo =>
+      $composableBuilder(column: $table.memo, builder: (column) => column);
 
   Expression<T> pricesRefs<T extends Object>(
     Expression<T> Function($$PricesTableAnnotationComposer a) f,
@@ -1684,6 +2469,31 @@ class $$ShopsTableAnnotationComposer
     );
     return f(composer);
   }
+
+  Expression<T> shopEventsRefs<T extends Object>(
+    Expression<T> Function($$ShopEventsTableAnnotationComposer a) f,
+  ) {
+    final $$ShopEventsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.id,
+      referencedTable: $db.shopEvents,
+      getReferencedColumn: (t) => t.shopId,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopEventsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shopEvents,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return f(composer);
+  }
 }
 
 class $$ShopsTableTableManager
@@ -1699,7 +2509,7 @@ class $$ShopsTableTableManager
           $$ShopsTableUpdateCompanionBuilder,
           (Shop, $$ShopsTableReferences),
           Shop,
-          PrefetchHooks Function({bool pricesRefs})
+          PrefetchHooks Function({bool pricesRefs, bool shopEventsRefs})
         > {
   $$ShopsTableTableManager(_$AppDatabase db, $ShopsTable table)
     : super(
@@ -1716,39 +2526,65 @@ class $$ShopsTableTableManager
               ({
                 Value<int> id = const Value.absent(),
                 Value<String> name = const Value.absent(),
-              }) => ShopsCompanion(id: id, name: name),
+                Value<String?> memo = const Value.absent(),
+              }) => ShopsCompanion(id: id, name: name, memo: memo),
           createCompanionCallback:
-              ({Value<int> id = const Value.absent(), required String name}) =>
-                  ShopsCompanion.insert(id: id, name: name),
+              ({
+                Value<int> id = const Value.absent(),
+                required String name,
+                Value<String?> memo = const Value.absent(),
+              }) => ShopsCompanion.insert(id: id, name: name, memo: memo),
           withReferenceMapper: (p0) => p0
               .map(
                 (e) =>
                     (e.readTable(table), $$ShopsTableReferences(db, table, e)),
               )
               .toList(),
-          prefetchHooksCallback: ({pricesRefs = false}) {
-            return PrefetchHooks(
-              db: db,
-              explicitlyWatchedTables: [if (pricesRefs) db.prices],
-              addJoins: null,
-              getPrefetchedDataCallback: (items) async {
-                return [
-                  if (pricesRefs)
-                    await $_getPrefetchedData<Shop, $ShopsTable, Price>(
-                      currentTable: table,
-                      referencedTable: $$ShopsTableReferences._pricesRefsTable(
-                        db,
-                      ),
-                      managerFromTypedResult: (p0) =>
-                          $$ShopsTableReferences(db, table, p0).pricesRefs,
-                      referencedItemsForCurrentItem: (item, referencedItems) =>
-                          referencedItems.where((e) => e.shopId == item.id),
-                      typedResults: items,
-                    ),
-                ];
+          prefetchHooksCallback:
+              ({pricesRefs = false, shopEventsRefs = false}) {
+                return PrefetchHooks(
+                  db: db,
+                  explicitlyWatchedTables: [
+                    if (pricesRefs) db.prices,
+                    if (shopEventsRefs) db.shopEvents,
+                  ],
+                  addJoins: null,
+                  getPrefetchedDataCallback: (items) async {
+                    return [
+                      if (pricesRefs)
+                        await $_getPrefetchedData<Shop, $ShopsTable, Price>(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._pricesRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(db, table, p0).pricesRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                      if (shopEventsRefs)
+                        await $_getPrefetchedData<Shop, $ShopsTable, ShopEvent>(
+                          currentTable: table,
+                          referencedTable: $$ShopsTableReferences
+                              ._shopEventsRefsTable(db),
+                          managerFromTypedResult: (p0) =>
+                              $$ShopsTableReferences(
+                                db,
+                                table,
+                                p0,
+                              ).shopEventsRefs,
+                          referencedItemsForCurrentItem:
+                              (item, referencedItems) => referencedItems.where(
+                                (e) => e.shopId == item.id,
+                              ),
+                          typedResults: items,
+                        ),
+                    ];
+                  },
+                );
               },
-            );
-          },
         ),
       );
 }
@@ -1765,7 +2601,7 @@ typedef $$ShopsTableProcessedTableManager =
       $$ShopsTableUpdateCompanionBuilder,
       (Shop, $$ShopsTableReferences),
       Shop,
-      PrefetchHooks Function({bool pricesRefs})
+      PrefetchHooks Function({bool pricesRefs, bool shopEventsRefs})
     >;
 typedef $$ProductsTableCreateCompanionBuilder =
     ProductsCompanion Function({
@@ -1774,6 +2610,8 @@ typedef $$ProductsTableCreateCompanionBuilder =
       required int categoryId,
       Value<String?> imagePath,
       Value<String?> emoji,
+      Value<double?> volume,
+      Value<String?> volumeUnit,
       Value<DateTime> createdAt,
     });
 typedef $$ProductsTableUpdateCompanionBuilder =
@@ -1783,6 +2621,8 @@ typedef $$ProductsTableUpdateCompanionBuilder =
       Value<int> categoryId,
       Value<String?> imagePath,
       Value<String?> emoji,
+      Value<double?> volume,
+      Value<String?> volumeUnit,
       Value<DateTime> createdAt,
     });
 
@@ -1855,6 +2695,16 @@ class $$ProductsTableFilterComposer
 
   ColumnFilters<String> get emoji => $composableBuilder(
     column: $table.emoji,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<double> get volume => $composableBuilder(
+    column: $table.volume,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get volumeUnit => $composableBuilder(
+    column: $table.volumeUnit,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1941,6 +2791,16 @@ class $$ProductsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<double> get volume => $composableBuilder(
+    column: $table.volume,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get volumeUnit => $composableBuilder(
+    column: $table.volumeUnit,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAt => $composableBuilder(
     column: $table.createdAt,
     builder: (column) => ColumnOrderings(column),
@@ -1990,6 +2850,14 @@ class $$ProductsTableAnnotationComposer
 
   GeneratedColumn<String> get emoji =>
       $composableBuilder(column: $table.emoji, builder: (column) => column);
+
+  GeneratedColumn<double> get volume =>
+      $composableBuilder(column: $table.volume, builder: (column) => column);
+
+  GeneratedColumn<String> get volumeUnit => $composableBuilder(
+    column: $table.volumeUnit,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -2076,6 +2944,8 @@ class $$ProductsTableTableManager
                 Value<int> categoryId = const Value.absent(),
                 Value<String?> imagePath = const Value.absent(),
                 Value<String?> emoji = const Value.absent(),
+                Value<double?> volume = const Value.absent(),
+                Value<String?> volumeUnit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion(
                 id: id,
@@ -2083,6 +2953,8 @@ class $$ProductsTableTableManager
                 categoryId: categoryId,
                 imagePath: imagePath,
                 emoji: emoji,
+                volume: volume,
+                volumeUnit: volumeUnit,
                 createdAt: createdAt,
               ),
           createCompanionCallback:
@@ -2092,6 +2964,8 @@ class $$ProductsTableTableManager
                 required int categoryId,
                 Value<String?> imagePath = const Value.absent(),
                 Value<String?> emoji = const Value.absent(),
+                Value<double?> volume = const Value.absent(),
+                Value<String?> volumeUnit = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
               }) => ProductsCompanion.insert(
                 id: id,
@@ -2099,6 +2973,8 @@ class $$ProductsTableTableManager
                 categoryId: categoryId,
                 imagePath: imagePath,
                 emoji: emoji,
+                volume: volume,
+                volumeUnit: volumeUnit,
                 createdAt: createdAt,
               ),
           withReferenceMapper: (p0) => p0
@@ -2615,6 +3491,398 @@ typedef $$PricesTableProcessedTableManager =
       Price,
       PrefetchHooks Function({bool productId, bool shopId})
     >;
+typedef $$ShopEventsTableCreateCompanionBuilder =
+    ShopEventsCompanion Function({
+      Value<int> id,
+      required int shopId,
+      required String title,
+      Value<String?> description,
+      Value<String> eventType,
+      Value<int?> dayOfWeek,
+      Value<int?> dayOfMonth,
+      Value<DateTime?> date,
+      Value<DateTime> createdAt,
+    });
+typedef $$ShopEventsTableUpdateCompanionBuilder =
+    ShopEventsCompanion Function({
+      Value<int> id,
+      Value<int> shopId,
+      Value<String> title,
+      Value<String?> description,
+      Value<String> eventType,
+      Value<int?> dayOfWeek,
+      Value<int?> dayOfMonth,
+      Value<DateTime?> date,
+      Value<DateTime> createdAt,
+    });
+
+final class $$ShopEventsTableReferences
+    extends BaseReferences<_$AppDatabase, $ShopEventsTable, ShopEvent> {
+  $$ShopEventsTableReferences(super.$_db, super.$_table, super.$_typedResult);
+
+  static $ShopsTable _shopIdTable(_$AppDatabase db) => db.shops.createAlias(
+    $_aliasNameGenerator(db.shopEvents.shopId, db.shops.id),
+  );
+
+  $$ShopsTableProcessedTableManager get shopId {
+    final $_column = $_itemColumn<int>('shop_id')!;
+
+    final manager = $$ShopsTableTableManager(
+      $_db,
+      $_db.shops,
+    ).filter((f) => f.id.sqlEquals($_column));
+    final item = $_typedResult.readTableOrNull(_shopIdTable($_db));
+    if (item == null) return manager;
+    return ProcessedTableManager(
+      manager.$state.copyWith(prefetchedData: [item]),
+    );
+  }
+}
+
+class $$ShopEventsTableFilterComposer
+    extends Composer<_$AppDatabase, $ShopEventsTable> {
+  $$ShopEventsTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dayOfWeek => $composableBuilder(
+    column: $table.dayOfWeek,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  $$ShopsTableFilterComposer get shopId {
+    final $$ShopsTableFilterComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableFilterComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShopEventsTableOrderingComposer
+    extends Composer<_$AppDatabase, $ShopEventsTable> {
+  $$ShopEventsTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<int> get id => $composableBuilder(
+    column: $table.id,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get title => $composableBuilder(
+    column: $table.title,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get eventType => $composableBuilder(
+    column: $table.eventType,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dayOfWeek => $composableBuilder(
+    column: $table.dayOfWeek,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get date => $composableBuilder(
+    column: $table.date,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAt => $composableBuilder(
+    column: $table.createdAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  $$ShopsTableOrderingComposer get shopId {
+    final $$ShopsTableOrderingComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableOrderingComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShopEventsTableAnnotationComposer
+    extends Composer<_$AppDatabase, $ShopEventsTable> {
+  $$ShopEventsTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<int> get id =>
+      $composableBuilder(column: $table.id, builder: (column) => column);
+
+  GeneratedColumn<String> get title =>
+      $composableBuilder(column: $table.title, builder: (column) => column);
+
+  GeneratedColumn<String> get description => $composableBuilder(
+    column: $table.description,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get eventType =>
+      $composableBuilder(column: $table.eventType, builder: (column) => column);
+
+  GeneratedColumn<int> get dayOfWeek =>
+      $composableBuilder(column: $table.dayOfWeek, builder: (column) => column);
+
+  GeneratedColumn<int> get dayOfMonth => $composableBuilder(
+    column: $table.dayOfMonth,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get date =>
+      $composableBuilder(column: $table.date, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get createdAt =>
+      $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  $$ShopsTableAnnotationComposer get shopId {
+    final $$ShopsTableAnnotationComposer composer = $composerBuilder(
+      composer: this,
+      getCurrentColumn: (t) => t.shopId,
+      referencedTable: $db.shops,
+      getReferencedColumn: (t) => t.id,
+      builder:
+          (
+            joinBuilder, {
+            $addJoinBuilderToRootComposer,
+            $removeJoinBuilderFromRootComposer,
+          }) => $$ShopsTableAnnotationComposer(
+            $db: $db,
+            $table: $db.shops,
+            $addJoinBuilderToRootComposer: $addJoinBuilderToRootComposer,
+            joinBuilder: joinBuilder,
+            $removeJoinBuilderFromRootComposer:
+                $removeJoinBuilderFromRootComposer,
+          ),
+    );
+    return composer;
+  }
+}
+
+class $$ShopEventsTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $ShopEventsTable,
+          ShopEvent,
+          $$ShopEventsTableFilterComposer,
+          $$ShopEventsTableOrderingComposer,
+          $$ShopEventsTableAnnotationComposer,
+          $$ShopEventsTableCreateCompanionBuilder,
+          $$ShopEventsTableUpdateCompanionBuilder,
+          (ShopEvent, $$ShopEventsTableReferences),
+          ShopEvent,
+          PrefetchHooks Function({bool shopId})
+        > {
+  $$ShopEventsTableTableManager(_$AppDatabase db, $ShopEventsTable table)
+    : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$ShopEventsTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$ShopEventsTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$ShopEventsTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                Value<int> shopId = const Value.absent(),
+                Value<String> title = const Value.absent(),
+                Value<String?> description = const Value.absent(),
+                Value<String> eventType = const Value.absent(),
+                Value<int?> dayOfWeek = const Value.absent(),
+                Value<int?> dayOfMonth = const Value.absent(),
+                Value<DateTime?> date = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ShopEventsCompanion(
+                id: id,
+                shopId: shopId,
+                title: title,
+                description: description,
+                eventType: eventType,
+                dayOfWeek: dayOfWeek,
+                dayOfMonth: dayOfMonth,
+                date: date,
+                createdAt: createdAt,
+              ),
+          createCompanionCallback:
+              ({
+                Value<int> id = const Value.absent(),
+                required int shopId,
+                required String title,
+                Value<String?> description = const Value.absent(),
+                Value<String> eventType = const Value.absent(),
+                Value<int?> dayOfWeek = const Value.absent(),
+                Value<int?> dayOfMonth = const Value.absent(),
+                Value<DateTime?> date = const Value.absent(),
+                Value<DateTime> createdAt = const Value.absent(),
+              }) => ShopEventsCompanion.insert(
+                id: id,
+                shopId: shopId,
+                title: title,
+                description: description,
+                eventType: eventType,
+                dayOfWeek: dayOfWeek,
+                dayOfMonth: dayOfMonth,
+                date: date,
+                createdAt: createdAt,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable(table),
+                  $$ShopEventsTableReferences(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: ({shopId = false}) {
+            return PrefetchHooks(
+              db: db,
+              explicitlyWatchedTables: [],
+              addJoins:
+                  <
+                    T extends TableManagerState<
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic,
+                      dynamic
+                    >
+                  >(state) {
+                    if (shopId) {
+                      state =
+                          state.withJoin(
+                                currentTable: table,
+                                currentColumn: table.shopId,
+                                referencedTable: $$ShopEventsTableReferences
+                                    ._shopIdTable(db),
+                                referencedColumn: $$ShopEventsTableReferences
+                                    ._shopIdTable(db)
+                                    .id,
+                              )
+                              as T;
+                    }
+
+                    return state;
+                  },
+              getPrefetchedDataCallback: (items) async {
+                return [];
+              },
+            );
+          },
+        ),
+      );
+}
+
+typedef $$ShopEventsTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $ShopEventsTable,
+      ShopEvent,
+      $$ShopEventsTableFilterComposer,
+      $$ShopEventsTableOrderingComposer,
+      $$ShopEventsTableAnnotationComposer,
+      $$ShopEventsTableCreateCompanionBuilder,
+      $$ShopEventsTableUpdateCompanionBuilder,
+      (ShopEvent, $$ShopEventsTableReferences),
+      ShopEvent,
+      PrefetchHooks Function({bool shopId})
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -2627,4 +3895,6 @@ class $AppDatabaseManager {
       $$ProductsTableTableManager(_db, _db.products);
   $$PricesTableTableManager get prices =>
       $$PricesTableTableManager(_db, _db.prices);
+  $$ShopEventsTableTableManager get shopEvents =>
+      $$ShopEventsTableTableManager(_db, _db.shopEvents);
 }
